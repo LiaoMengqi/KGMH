@@ -1,5 +1,9 @@
 import os
 import numpy as np
+from utils.data_process import load_data
+from utils.data_process import load_dict
+from utils.data_process import reverse_dict
+
 
 
 class DataLoader(object):
@@ -15,15 +19,32 @@ class DataLoader(object):
         self.train = None
         self.valid = None
         self.test = None
+        self.id2entity = {}
+        self.id2relation = {}
+        self.entity2id = {}
+        self.relation2id = {}
+        self.num_relation = 0
+        self.num_entity = 0
 
-    def load_data(self):
+    def load(self, load_time=False, encoding='utf-8'):
         """
         Initialize training set, validation set and test set.
         """
-        with open(self.path + self.dataset + './train.txt') as file:
-            train = []
-            for line in file:
-                line = str(line)
-                line = line.strip()
-                items = line.split('\t')
-                train.append([int(items[0]), int(items[1]), int(items[2])])
+        file = self.path + '/' + self.dataset + '/train.txt'
+        self.train = load_data(file, load_time=load_time, encoding=encoding)
+
+        file = self.path + '/' + self.dataset + '/valid.txt'
+        self.valid = load_data(file, load_time=load_time, encoding=encoding)
+
+        file = self.path + '/' + self.dataset + '/test.txt'
+        self.test = load_data(file, load_time=load_time, encoding=encoding)
+
+        file = self.path + '/' + self.dataset + '/relation2id.txt'
+        self.relation2id = load_dict(file)
+        self.id2relation = reverse_dict(self.relation2id)
+        self.num_relation = len(self.relation2id)
+
+        file = self.path + '/' + self.dataset + '/entity2id.txt'
+        self.entity2id = load_dict(file)
+        self.id2entity = reverse_dict(self.id2entity)
+        self.num_entity = len(self.entity2id)

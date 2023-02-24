@@ -1,5 +1,6 @@
-from .utils import data_process
-from .DataLoader import DataLoader
+from DataLoader import DataLoader
+from utils.data_process import split_data_by_time
 
-data = DataLoader("dataset", "../data")
-data_process.split_data(data)
+data = DataLoader("ICEWS14s", "./data")
+data.load(load_time=True)
+data_train_split, _, _ = split_data_by_time(data.train)
