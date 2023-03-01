@@ -1,6 +1,6 @@
 from data_loader import DataLoader
 from utils.data_process import split_data_by_time
-from models.layers import GNNLayer
+from models.layers import GCNLayer
 
 data = DataLoader("ICEWS14s", "./data")
 data.load(load_time=True)
