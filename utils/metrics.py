@@ -12,3 +12,7 @@ def calculate_hist(k: int, ranks: np.ndarray):
 
 def calculate_mrr(ranks: np.ndarray):
     return (1. / ranks).sum() / ranks.shape[0]
+
+
+def calculate_mse(output: np.ndarray, label: np.ndarray):
+    return np.sum(np.power(output - label, 2)) / output.shape[0]

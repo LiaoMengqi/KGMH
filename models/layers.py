@@ -1,10 +1,14 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from torch_geometric.nn import MessagePassing
+from torch_geometric.utils import add_self_loops, degree
 from scipy.sparse import csr_matrix
 import numpy as np
 
 
-class GCNLayer(nn.Module):
+
+class RGCNLayer(nn.Module):
     def __init__(self, input_dim, output_dim, bias=False, active='rrelu', dtype=torch.float64):
         """
         :param input_dim:
@@ -12,7 +16,7 @@ class GCNLayer(nn.Module):
         :param bias:
         :param active:
         """
-        super(GCNLayer, self).__init__()
+        super(RGCNLayer, self).__init__()
         self.dtype = dtype
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -96,3 +100,31 @@ class WGCNLayer(nn.Module):
         des_index, message = self.aggregate(message, nodes_embed.shape[0], edges.shape[0], edges[:, 2])
         h[des_index] = h[des_index] + message
         return self.active(h)
+
+
+
+class GCNLayer(MessagePassing):
+    def __init__(self, in_channels, out_channels):
+        super(GCNLayer, self).__init__(aggr='add')
+        self.lin = torch.nn.Linear(in_channels, out_channels)
+
+    def forward(self, x, edge_index):
+        # 添加自环
+        edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
+        # 计算规范化的邻接矩阵
+        deg = degree(edge_index[0], x.size(0), dtype=x.dtype)
+        deg_inv_sqrt = deg.pow(-0.5)
+        deg_inv_sqrt[torch.isinf(deg_inv_sqrt)] = 0
+        norm = deg_inv_sqrt[edge_index[0]] * deg_inv_sqrt[edge_index[1]]
+        # 传递消息
+        return self.propagate(edge_index, x=x, norm=norm)
+
+    def message(self, x_j, norm):
+        # 消息传递函数
+        return norm.view(-1, 1) * x_j
+
+    def update(self, aggr_out):
+        # 更新节点特征
+        return self.lin(aggr_out)
+
+
