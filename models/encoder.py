@@ -6,8 +6,9 @@ from layers import GCNLayer
 
 
 class TransE(nn.Module):
-    def __init__(self, num_entity, num_relation, emb_dim, max_norm=None, norm_type=2, dtype=torch.float):
+    def __init__(self, num_entity, num_relation, emb_dim, max_norm=None, norm_type=2, dtype=torch.float, margin=1.0):
         super(TransE, self).__init__()
+        self.margin = margin
         if max_norm is not None:
             self.entity_embedding = nn.Embedding(num_entity, emb_dim, dtype=dtype, max_norm=max_norm,
                                                  norm_type=norm_type)
@@ -33,6 +34,17 @@ class TransE(nn.Module):
         if relation is not None:
             tail_emb = self.entity_embedding(tail)
         return head_emb, relation_emb, tail_emb
+
+    def calculate_loss(self, head_emb, relation_emb, tail_emb, positive_edge, negative_edge):
+        """
+        Loss described in paper-Translating Embeddings for Modeling Multi-relational Data
+        """
+        loss = self.margin + torch.abs(
+            head_emb[positive_edge[0]] + relation_emb[positive_edge[1]] - tail_emb[positive_edge[2]])
+        loss = loss - torch.abs(
+            head_emb[negative_edge[0]] + relation_emb[negative_edge[1]] - tail_emb[negative_edge[2]])
+        loss = F.relu(torch.sum(loss, dim=1))
+        return loss.sum()
 
 
 class GCN(torch.nn.Module):
@@ -63,3 +75,4 @@ class GCN(torch.nn.Module):
                 node_presentation = F.relu(self.layers[i](node_presentation, edges))
             node_presentation = self.layers[-1](node_presentation, edges)
         return node_presentation
+

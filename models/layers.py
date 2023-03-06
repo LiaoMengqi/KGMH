@@ -1,11 +1,9 @@
+import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from scipy.sparse import csr_matrix
 from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import add_self_loops, degree
-from scipy.sparse import csr_matrix
-import numpy as np
-
 
 
 class RGCNLayer(nn.Module):
@@ -32,12 +30,12 @@ class RGCNLayer(nn.Module):
     def calculate_message(self, src, rela):
         return self.fc_aggregate(src + rela)
 
-    def aggregate(self, message, num_node, num_edge, des):
+    def aggregate(self, message, num_node, des):
         des_unique, count = torch.unique(des, return_counts=True)
         index_matrix = csr_matrix((np.array(range(des_unique.shape[0]), dtype='int64'),
                                    (des_unique, np.zeros(des_unique.shape[0], dtype='int64'))),
                                   shape=(num_node, 1))
-        index = torch.zeros(num_edge, self.output_dim, dtype=torch.int64) + index_matrix[des].todense()
+        index = torch.zeros(message.shape[0], self.output_dim, dtype=torch.int64) + index_matrix[des].todense()
         message = torch.zeros(des_unique.shape[0], self.output_dim, dtype=self.dtype).scatter_(0, index, message,
                                                                                                reduce='add')
         return des_unique, message / (count.reshape(des_unique.shape[0], 1))
@@ -54,7 +52,7 @@ class RGCNLayer(nn.Module):
         # calculate message
         message = self.calculate_message(nodes_embed[edges[:, 0]], edges_embed[edges[:, 1]])
         # aggregate
-        des_index, message = self.aggregate(message, nodes_embed.shape[0], edges.shape[0], edges[:, 2])
+        des_index, message = self.aggregate(message, nodes_embed.shape[0], edges[:, 2])
         # send message
         h[des_index] = h[des_index] + message
         return self.active(h)
@@ -79,12 +77,12 @@ class WGCNLayer(nn.Module):
     def calculate_message(self, src, relation_weight):
         return self.fc(src * relation_weight)
 
-    def aggregate(self, message, num_node, num_edge, des):
+    def aggregate(self, message, num_node, des):
         des_unique, count = torch.unique(des, return_counts=True)
         index_matrix = csr_matrix((np.array(range(des_unique.shape[0]), dtype='int64'),
                                    (des_unique, np.zeros(des_unique.shape[0], dtype='int64'))),
                                   shape=(num_node, 1))
-        index = torch.zeros(num_edge, self.output_dim, dtype=torch.int64) + index_matrix[des].todense()
+        index = torch.zeros(message.shape[0], message.shape[1], dtype=torch.int64) + index_matrix[des].todense()
         message = torch.zeros(des_unique.shape[0], self.output_dim, dtype=self.dtype).scatter_(0, index, message,
                                                                                                reduce='add')
         return des_unique, message
@@ -100,7 +98,6 @@ class WGCNLayer(nn.Module):
         des_index, message = self.aggregate(message, nodes_embed.shape[0], edges.shape[0], edges[:, 2])
         h[des_index] = h[des_index] + message
         return self.active(h)
-
 
 
 class GCNLayer(MessagePassing):
@@ -133,3 +130,67 @@ class GCNLayer(MessagePassing):
         return self.lin(aggr_out)
 
 
+class CompGCNLayer(nn.Module):
+    def __init__(self, input_dim, output_dim, num_rela, dtype=torch.float):
+        super(CompGCNLayer, self).__init__()
+        self.output_dim = output_dim
+        self.num_rela = num_rela
+        self.dtype = dtype
+        self.W_o = nn.Linear(input_dim, output_dim, bias=False)
+        self.W_i = nn.Linear(input_dim, output_dim, bias=False)
+        self.W_s = nn.Linear(input_dim, output_dim, bias=False)
+        self.W_r = nn.Linear(input_dim, output_dim, bias=False)
+
+    def composition(self, node_embed, rela_embed, mode='add'):
+        if mode == 'add':
+            res = node_embed + rela_embed
+        elif mode == 'sub':
+            res = node_embed - rela_embed
+        elif mode == 'mult':
+            res = node_embed * rela_embed
+        else:
+            res = None
+        return res
+
+    def aggregate(self, message, num_node, des):
+        des_unique = torch.unique(des)
+        index_matrix = csr_matrix((np.array(range(des_unique.shape[0]), dtype='int64'),
+                                   (des_unique, np.zeros(des_unique.shape[0], dtype='int64'))),
+                                  shape=(num_node, 1))
+        index = torch.zeros(message.shape[0], message.shape[1], dtype=torch.long) + index_matrix[des].todense()
+        message = torch.zeros(des_unique.shape[0], message.shape[1], dtype=self.dtype).scatter_(0, index, message,
+                                                                                                reduce='add')
+        return des_unique, message
+
+    def forward(self, node_embed, rela_embed, edges, mode='add'):
+        """
+        :param node_embed:
+        :param rela_embed:
+        :param edges: LongTensor, including the original edge and reversed edge
+        :param mode: Method to composite representations of relations and nodes
+        :return:
+        """
+        # self loop
+        h_v = self.W_i(self.composition(node_embed, rela_embed[self.num_rela * 2], mode))
+
+        # original edges
+        index = edges[:, 1] < self.num_rela
+        src = edges[index][:, 0]
+        rela = edges[index][:, 1]
+        des = edges[index][:, 2]
+        message = self.W_o(self.composition(node_embed[src], rela_embed[rela]))
+        des_index, message = self.aggregate(message, node_embed.shape[0], des)
+        h_v[des_index] = h_v[des_index] + message
+
+        # reversed edges
+        index = edges[:, 1] > self.num_rela
+        src = edges[index][:, 0]
+        rela = edges[index][:, 1]
+        des = edges[index][:, 2]
+        message = self.W_o(self.composition(node_embed[src], rela_embed[rela]))
+        des_index, message = self.aggregate(message, node_embed.shape[0], des)
+        h_v[des_index] = h_v[des_index] + message
+
+        # update relation representation
+        h_r = self.W_r(rela_embed)
+        return h_v, h_r
