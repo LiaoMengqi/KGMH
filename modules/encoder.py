@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from layers import GCNLayer
+from modules.layers import GCNLayer
 
 
 class TransE(nn.Module):

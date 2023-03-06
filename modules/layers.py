@@ -6,7 +6,7 @@ from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import add_self_loops, degree
 
 
-class RGCNLayer(nn.Module):
+class REGCNLayer(nn.Module):
     def __init__(self, input_dim, output_dim, bias=False, active='rrelu', dtype=torch.float64):
         """
         :param input_dim:
@@ -14,7 +14,7 @@ class RGCNLayer(nn.Module):
         :param bias:
         :param active:
         """
-        super(RGCNLayer, self).__init__()
+        super(REGCNLayer, self).__init__()
         self.dtype = dtype
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -152,14 +152,10 @@ class CompGCNLayer(nn.Module):
             res = None
         return res
 
-    def aggregate(self, message, num_node, des):
-        des_unique = torch.unique(des)
-        index_matrix = csr_matrix((np.array(range(des_unique.shape[0]), dtype='int64'),
-                                   (des_unique, np.zeros(des_unique.shape[0], dtype='int64'))),
-                                  shape=(num_node, 1))
-        index = torch.zeros(message.shape[0], message.shape[1], dtype=torch.long) + index_matrix[des].todense()
-        message = torch.zeros(des_unique.shape[0], message.shape[1], dtype=self.dtype).scatter_(0, index, message,
-                                                                                                reduce='add')
+    def aggregate(self, message, des):
+        des_unique, des_index = torch.unique(des, return_inverse=True)
+        message = torch.zeros(des_unique.shape[0], message.shape[1], dtype=self.dtype).scatter_add_(
+            0, des_index.unsqueeze(1).expand_as(message), message)
         return des_unique, message
 
     def forward(self, node_embed, rela_embed, edges, mode='add'):
@@ -178,19 +174,69 @@ class CompGCNLayer(nn.Module):
         src = edges[index][:, 0]
         rela = edges[index][:, 1]
         des = edges[index][:, 2]
+        index_matrix = torch.zeros(node_embed.shape[0], dtype=torch.long)
+        index_matrix[des] = torch.arange(des.shape[0], dtype=torch.long)
         message = self.W_o(self.composition(node_embed[src], rela_embed[rela]))
-        des_index, message = self.aggregate(message, node_embed.shape[0], des)
+        message = message[index_matrix[des]]
+        des_index, message = self.aggregate(message, des)
         h_v[des_index] = h_v[des_index] + message
 
         # reversed edges
-        index = edges[:, 1] > self.num_rela
+        index = edges[:, 1] >= self.num_rela
         src = edges[index][:, 0]
         rela = edges[index][:, 1]
         des = edges[index][:, 2]
-        message = self.W_o(self.composition(node_embed[src], rela_embed[rela]))
-        des_index, message = self.aggregate(message, node_embed.shape[0], des)
+        index_matrix[des] = torch.arange(des.shape[0], dtype=torch.long)
+        message = self.W_s(self.composition(node_embed[src], rela_embed[rela]))
+        message = message[index_matrix[des]]
+        des_index, message = self.aggregate(message, des)
         h_v[des_index] = h_v[des_index] + message
 
         # update relation representation
         h_r = self.W_r(rela_embed)
         return h_v, h_r
+
+
+class RGCNLayer(nn.Module):
+    def __init__(self, input_dim, output_dim, num_rels):
+        super(RGCNLayer, self).__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.num_rels = num_rels
+        self.weight = nn.Parameter(torch.Tensor(num_rels, input_dim, output_dim))
+        self.self_loop_weigt = nn.Parameter(torch.Tensor(input_dim, output_dim))
+        nn.init.xavier_uniform_(self.weight, gain=nn.init.calculate_gain('relu'))
+
+    def aggregate(self, message, des):
+        des_unique, des_index, count = torch.unique(des, return_inverse=True, return_counts=True)
+        message = torch.zeros(des_unique.shape[0], message.shape[1], dtype=message.dtype).scatter_add_(
+            0, des_index.unsqueeze(1).expand_as(message), message)
+        return des_unique, message / count.reshape(-1, 1)
+
+    def forward(self, h, edges):
+        """
+        :param h: node embeddings, shape (num_nodes, input_dim)
+        :param edges: list of triplets (src, rel, dst)
+        :return: new node embeddings, shape (num_nodes, output_dim)
+        """
+        # separate triplets into src, rel, dst
+        src, rel, dst = edges.transpose(0, 1)
+        # gather node embeddings by indices
+        src_h = h[src]
+        # gather relation weights by indices
+        weight = self.weight[rel]
+        index_matrix = torch.zeros(h.shape[0], dtype=torch.long)
+        index_matrix[dst] = torch.arange(dst.shape[0], dtype=torch.long)
+        msg = torch.bmm(src_h.unsqueeze(1), weight).squeeze(1)
+        # sort message corresponding to destination node
+        msg = msg[index_matrix[dst]]
+        # aggregate message
+        dst_index, msg = self.aggregate(msg, dst)
+        # self loop message passing
+        out = torch.mm(h, self.self_loop_weigt)
+        # compose message
+        out[dst_index] = out[dst_index] + msg
+        return out
+
+
+

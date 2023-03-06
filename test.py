@@ -1,7 +1,4 @@
-from data_loader import DataLoader
-from utils.data_process import split_data_by_time
-from models.layers import GCNLayer
-from models.decoder import Conv_TransE
+from modules.decoder import Conv_TransE
 import torch
 
 model = Conv_TransE(16, 3, 3)
