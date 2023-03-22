@@ -1,9 +1,6 @@
-import os
-import numpy as np
 from utils.data_process import load_data
 from utils.data_process import load_dict
 from utils.data_process import reverse_dict
-
 
 
 class DataLoader(object):
@@ -48,3 +45,13 @@ class DataLoader(object):
         self.entity2id = load_dict(file)
         self.id2entity = reverse_dict(self.id2entity)
         self.num_entity = len(self.entity2id)
+
+    def to(self, device):
+        if device == 'cpu':
+            self.train.cpu()
+            self.valid.cpu()
+            self.test.cpu()
+        elif device == 'cuda':
+            self.train = self.train.cuda()
+            self.valid = self.valid.cuda()
+            self.test = self.test.cuda()
