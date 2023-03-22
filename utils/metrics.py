@@ -1,9 +1,10 @@
 import numpy as np
 from scipy.stats import rankdata
-import torch
+
 
 def calculate_rank(scores: np.ndarray, target_index: np.ndarray):
-    return rankdata(-scores, axis=-1)[np.arange(scores.shape[0]), target_index]
+    rank = rankdata(-scores, axis=-1)
+    return rank[np.arange(scores.shape[0]), target_index]
 
 
 def calculate_hist(k: int, ranks: np.ndarray):
