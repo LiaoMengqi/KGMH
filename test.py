@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 import utils.metrics as mt
 from data_loader import DataLoader
-from modules.encoder import TransE
+from base_models.transe_base import TransE
 from utils import data_process as dp
 
 # general
@@ -21,11 +21,12 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 data = DataLoader('FB15k-237', './data/static')
 data.load()
+data.to(device)
 valid_batched = dp.batch_data(data.valid, batch_size)
 transe = TransE(data.num_entity, data.num_relation, emb_dim=dim, margin=margin, c=c).to(device)
 opt = torch.optim.Adam(transe.parameters(), lr=lr)
 
-data.to(device)
+
 for epoch in range(epochs):
     transe.train()
     train_batched = dp.batch_data(data.train, batch_size)

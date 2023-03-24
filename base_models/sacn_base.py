@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-from scipy.sparse import csr_matrix
-import numpy as np
 
 
 class Conv_TransE(nn.Module):
