@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 
 
-class Conv_TransE(nn.Module):
+class Conv_TransEBase(nn.Module):
     def __init__(self, input_dim, num_channel, kernel_length, active='relu', dtype=torch.float64, bias=False):
-        super(Conv_TransE, self).__init__()
+        super(Conv_TransEBase, self).__init__()
         self.input_dim = input_dim
         self.c = num_channel
         self.k = kernel_length

@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 
 
-class CyGNet(nn.Module):
+class CyGNetBase(nn.Module):
     def __init__(self):
-        super(CyGNet, self).__init__()
+        super(CyGNetBase, self).__init__()
 
     def forward(self):
         return

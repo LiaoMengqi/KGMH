@@ -5,9 +5,9 @@ import torch.nn.functional as F
 from base_models.layers.gcn_layer import GCNLayer
 
 
-class GCN(torch.nn.Module):
+class GCNBase(torch.nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dims=None):
-        super(GCN, self).__init__()
+        super(GCNBase, self).__init__()
         self.layers = nn.ModuleList()
         if hidden_dims is None:
             hidden_dims = []
