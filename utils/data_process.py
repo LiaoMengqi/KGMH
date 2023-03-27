@@ -76,3 +76,11 @@ def batch_data(data: torch.Tensor, batch_size):
         else:
             res.append(data_shuffled[i * batch_size:data.shape[0]])
     return res
+
+
+def float_to_int_exp(num):
+    exp = 0
+    while num % 1 != 0:
+        num *= 10
+        exp += 1
+    return int(num), exp

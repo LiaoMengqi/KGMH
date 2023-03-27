@@ -7,18 +7,22 @@ from tqdm import tqdm
 
 from base_models.transe_base import TransEBase
 import utils.data_process as dps
-from data_loader import DataLoader
+from data.data_loader import DataLoader
 import utils.metrics as mtc
 
 
 class TransE(nn.Module):
-    def __init__(self, transe_base: TransEBase, data: DataLoader, opt: torch.optim.Optimizer):
+    def __init__(self,
+                 transe_base: TransEBase,
+                 data: DataLoader,
+                 opt: torch.optim.Optimizer):
         super(TransE, self).__init__()
         self.model = transe_base
         self.data = data
         self.opt = opt
 
-    def train_epoch(self, batch_size: int) -> float:
+    def train_epoch(self,
+                    batch_size: int) -> float:
         data_batched = dps.batch_data(self.data.train, batch_size)
         total_loss = 0
         for batch in tqdm(data_batched):
@@ -31,7 +35,11 @@ class TransE(nn.Module):
             total_loss = total_loss + float(loss)
         return total_loss
 
-    def test(self, batch_size, dataset='valid', mode='obj', metric_list=None):
+    def test(self,
+             batch_size,
+             dataset='valid',
+             mode='obj',
+             metric_list=None):
         if metric_list is None:
             metric_list = ['hist@1', 'hist@3', 'hist@10']
         if dataset == 'valid':
@@ -59,18 +67,21 @@ class TransE(nn.Module):
                 metric_dict['mr'] = all_rank.mean()
         return metric_dict
 
-    def loss(self, pos_edge, nag_edge):
-        self.model.norm_weight()
+    def loss(self,
+             pos_edge,
+             nag_edge):
+        # self.model.norm_weight()
         pos_dis = self.model(pos_edge)
         nag_dis = self.model(nag_edge)
         loss = F.relu(self.model.margin + pos_dis - nag_dis).sum()
-        '''
-        rela_scale_loss = self.scale_loss(self.model.relation_embedding(pos_edge[:, 1]))
-        entity = torch.cat([pos_edge[:, 0], pos_edge[:, 2], nag_edge[:, 0], nag_edge[:, 2]])
+        # scale loss
+        relation = torch.unique(pos_edge[:, 1])
+        rela_scale_loss = self.scale_loss(self.model.relation_embedding(relation))
+        entity = torch.unique(torch.cat([pos_edge[:, 0], pos_edge[:, 2], nag_edge[:, 0], nag_edge[:, 2]]))
         entity_scale_loss = self.scale_loss(self.model.entity_embedding(entity))
-        loss = loss + self.model.c * (rela_scale_loss + entity_scale_loss)
-        '''
+        # compose loss
+        loss = loss + self.model.c_e * entity_scale_loss + self.model.c_r * rela_scale_loss
         return loss
 
     def scale_loss(self, embed):
-        return F.relu(embed.norm(p=2, dim=1) - 1).sum() / embed.shape[0]
+        return F.relu(embed.norm(p=2, dim=-1) - 1).sum() / embed.shape[0]
