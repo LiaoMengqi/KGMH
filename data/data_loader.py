@@ -1,5 +1,5 @@
-from utils.data_process import load_data
-from utils.data_process import load_dict
+from utils.fio import load_data
+from utils.fio import load_dict
 from utils.data_process import reverse_dict
 
 
@@ -46,7 +46,8 @@ class DataLoader(object):
         self.id2entity = reverse_dict(self.id2entity)
         self.num_entity = len(self.entity2id)
 
-    def to(self, device):
+    def to(self,
+           device):
         if device == 'cpu':
             self.train.cpu()
             self.valid.cpu()
