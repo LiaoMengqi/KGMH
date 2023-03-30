@@ -50,6 +50,7 @@ class CyGNet(nn.Module):
                 loss.backward()
                 all_loss = all_loss + float(loss)
                 self.opt.step()
+                # self.model.nan_to_zero()
             self.update_vocabulary(self.train_data[i][:, 0], self.train_data[i][:, 1], self.train_data[i][:, 2])
         return all_loss
 

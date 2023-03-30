@@ -7,7 +7,8 @@ class CyGNetBase(nn.Module):
                  num_entity,
                  num_relation,
                  h_dim,
-                 alpha=0.5):
+                 alpha=0.5,
+                 penalty=-100):
         super(CyGNetBase, self).__init__()
 
         self.alpha = alpha
@@ -20,8 +21,14 @@ class CyGNetBase(nn.Module):
         self.w_c = nn.Linear(h_dim * 3, self.num_entity)
         self.w_g = nn.Linear(h_dim * 3, self.num_entity)
 
-        self.penalty_factor = 100
+        self.penalty = penalty
         self.weight_init()
+
+    def nan_to_zero(self):
+        with torch.no_grad():
+            self.unit_time_embed.data = torch.nan_to_num(self.unit_time_embed.data)
+            self.entity_embed.data = torch.nan_to_num(self.entity_embed.data)
+            self.relation_embed.data = torch.nan_to_num(self.relation_embed.data)
 
     def weight_init(self):
         # 非权重，是嵌入，这样初始化有问题
@@ -40,7 +47,7 @@ class CyGNetBase(nn.Module):
                    vocabulary: torch.Tensor) -> torch.Tensor:
         matrix = torch.cat([e_embed, r_embed, t_embed.expand(e_embed.shape)], dim=-1)
         score = nn.functional.tanh(self.w_c(matrix))
-        mask = vocabulary * self.penalty_factor
+        mask = (vocabulary == 0).type(vocabulary.dtype) * self.penalty
         return nn.functional.softmax(score + mask, dim=-1)
 
     def generate_score(self,

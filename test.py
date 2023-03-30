@@ -6,12 +6,14 @@ from models.cygnet import CyGNet
 from utils.plot import hist_value
 
 # general hyper parameters
-epochs = 10
+epochs = 30
 lr = 0.001
 batch_size = 1024
 # model special hyper parameters
-dim = 32
-alpha = 0.5
+dim = 200
+alpha = 0.7
+penalty = -100
+reg_fact = 0.01
 # device
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # data
@@ -28,14 +30,20 @@ rgcn = CyGNet(model, data, opt)
 rgcn.to(device)
 
 loss_list = []
-step = 2
+history_metric_dict = {}
+step = 5
 for epoch in range(epochs):
     if (epoch + 1) % step == 0:
         loss = rgcn.train_epoch(batch_size)
         torch.cuda.empty_cache()
         metrics = rgcn.test(batch_size=batch_size)
         torch.cuda.empty_cache()
-        print('epoch:%d |loss: %f |hist@100: %f |mr: %f' % (epoch + 1, loss, metrics['hist@100'], metrics['mr']))
+        print('epoch:%d |loss: %f |hist@10: %f |hist@100: %f |mr: %f' % (
+            epoch + 1, loss, metrics['hist@10'], metrics['hist@100'], metrics['mr']))
+        for key in metrics.keys():
+            if key not in history_metric_dict.keys():
+                history_metric_dict[key] = []
+            history_metric_dict[key].append(metrics[key])
     else:
         loss = rgcn.train_epoch(batch_size=batch_size)
         torch.cuda.empty_cache()
@@ -43,3 +51,5 @@ for epoch in range(epochs):
     loss_list.append(loss)
 
 hist_value({'loss': loss_list}, name='Loss')
+hist_value({'hist@10': history_metric_dict['hist@10'], 'hist@100': history_metric_dict['hist@100']}, name='hist@k')
+hist_value({'mr': history_metric_dict['mr']}, name='mr')
