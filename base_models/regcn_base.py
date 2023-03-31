@@ -28,7 +28,9 @@ class RGCNBase(nn.Module):
     def wight_init(self):
         pass
 
-    def forward(self, edges: torch.Tensor, h_input=None) -> torch.Tensor:
+    def forward(self,
+                edges: torch.Tensor,
+                h_input=None) -> torch.Tensor:
         if not self.input_embed:
             h_input = self.entity_embed.weight
 

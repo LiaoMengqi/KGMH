@@ -2,7 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def hist_value(hist_dict: dict, path='./', name='metric'):
+def hist_value(hist_dict: dict,
+               path='./',
+               name='metric'):
     fig = plt.figure(num=1, figsize=(6, 4))
     ax = fig.add_subplot(111)
     for key in hist_dict.keys():

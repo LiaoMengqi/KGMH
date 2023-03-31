@@ -12,7 +12,8 @@ import utils.metrics as mtc
 
 
 class RGCN(nn.Module):
-    def __init__(self, rgcn_base: RGCNBase,
+    def __init__(self,
+                 rgcn_base: RGCNBase,
                  data: DataLoader,
                  opt: torch.optim.Optimizer,
                  mode='prediction',

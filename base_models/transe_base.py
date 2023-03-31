@@ -32,13 +32,16 @@ class TransEBase(nn.Module):
             norm2 = self.entity_embedding.weight.norm(p=2, dim=1, keepdim=True)
             self.entity_embedding.weight.copy_(self.entity_embedding.weight / norm2)
 
-    def get_entity_embedding(self, index):
+    def get_entity_embedding(self,
+                             index):
         return self.entity_embedding(index)
 
-    def get_relation_embedding(self, index):
+    def get_relation_embedding(self,
+                               index):
         return self.relation_embedding(index)
 
-    def forward(self, edge: torch.Tensor):
+    def forward(self,
+                edge: torch.Tensor):
         """
         Loss described in paper-Translating Embeddings for Modeling Multi-relational Data
         """

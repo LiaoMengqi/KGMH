@@ -5,7 +5,13 @@ from scipy.sparse import csr_matrix
 
 
 class WGCNLayer(nn.Module):
-    def __init__(self, num_relation, input_dim, output_dim, active='relu', bias=False, dtype=torch.float):
+    def __init__(self,
+                 num_relation,
+                 input_dim,
+                 output_dim,
+                 active='relu',
+                 bias=False,
+                 dtype=torch.float):
         super(WGCNLayer, self).__init__()
         self.num_relation = num_relation
         self.input_dim = input_dim
@@ -20,10 +26,15 @@ class WGCNLayer(nn.Module):
         else:
             self.active = nn.ReLU()
 
-    def calculate_message(self, src, relation_weight):
+    def calculate_message(self,
+                          src,
+                          relation_weight):
         return self.fc(src * relation_weight)
 
-    def aggregate(self, message, num_node, des):
+    def aggregate(self,
+                  message,
+                  num_node,
+                  des):
         des_unique, count = torch.unique(des, return_counts=True)
         index_matrix = csr_matrix((np.array(range(des_unique.shape[0]), dtype='int64'),
                                    (des_unique, np.zeros(des_unique.shape[0], dtype='int64'))),
@@ -33,7 +44,9 @@ class WGCNLayer(nn.Module):
                                                                                                reduce='add')
         return des_unique, message
 
-    def forward(self, nodes_embed, edges):
+    def forward(self,
+                nodes_embed,
+                edges):
         """
         :param nodes_embed: Tensor, the embedding of nodes, size=(num_node,input_dim)
         :param edges: Tensor, size=(num_edge, 3), with the format of (source node, edge, destination node)

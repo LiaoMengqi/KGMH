@@ -1,7 +1,9 @@
 import torch
 
 
-def load_data(file: str, load_time=False, encoding='utf-8'):
+def load_data(file: str,
+              load_time=False,
+              encoding='utf-8'):
     data = []
     with open(file, encoding=encoding) as f:
         content = f.read()
@@ -17,7 +19,8 @@ def load_data(file: str, load_time=False, encoding='utf-8'):
     return data
 
 
-def load_dict(file: str, encoding='utf-8'):
+def load_dict(file: str,
+              encoding='utf-8'):
     dict_data = {}
     with open(file, encoding=encoding) as f:
         content = f.read()

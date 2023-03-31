@@ -7,12 +7,12 @@ from utils.plot import hist_value
 
 # general hyper parameters
 epochs = 30
-lr = 0.001
+lr = 0.0002
 batch_size = 1024
 # model special hyper parameters
-dim = 200
-alpha = 0.7
-penalty = -100
+dim = 100
+alpha = 0.3
+penalty = -10
 reg_fact = 0.01
 # device
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -21,7 +21,7 @@ data = DataLoader('ICEWS14s', './data/temporal/extrapolation')
 data.load(load_time=True)
 data.to(device)
 # base model
-model = CyGNetBase(data.num_entity, data.num_relation, dim, alpha=alpha)
+model = CyGNetBase(data.num_entity, data.num_relation, dim, alpha=alpha,penalty=penalty)
 model.to(device)
 # optimizer
 opt = torch.optim.Adam(params=model.parameters(), lr=lr)

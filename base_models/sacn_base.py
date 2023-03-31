@@ -3,7 +3,13 @@ import torch.nn as nn
 
 
 class Conv_TransEBase(nn.Module):
-    def __init__(self, input_dim, num_channel, kernel_length, active='relu', dtype=torch.float64, bias=False):
+    def __init__(self,
+                 input_dim,
+                 num_channel,
+                 kernel_length,
+                 active='relu',
+                 dtype=torch.float64,
+                 bias=False):
         super(Conv_TransEBase, self).__init__()
         self.input_dim = input_dim
         self.c = num_channel
@@ -24,7 +30,10 @@ class Conv_TransEBase(nn.Module):
         else:
             self.active = nn.ReLU()
 
-    def forward(self, entity_ebd, relation_ebd, query):
+    def forward(self,
+                entity_ebd,
+                relation_ebd,
+                query):
         """
         :param entity_ebd:Tensor, size=(num_entity, input_dim)
         :param relation_ebd: Tensor, size=(num_relation, input_dim)

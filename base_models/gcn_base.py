@@ -6,7 +6,10 @@ from base_models.layers.gcn_layer import GCNLayer
 
 
 class GCNBase(torch.nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_dims=None):
+    def __init__(self,
+                 input_dim,
+                 output_dim,
+                 hidden_dims=None):
         super(GCNBase, self).__init__()
         self.layers = nn.ModuleList()
         if hidden_dims is None:
@@ -16,7 +19,9 @@ class GCNBase(torch.nn.Module):
             self.layers.append(GCNLayer(all_dims[i], all_dims[i + 1]))
         self.num_layer = len(all_dims - 1)
 
-    def forward(self, node_presentation, edges):
+    def forward(self,
+                node_presentation,
+                edges):
         """
         :param node_presentation:Tensor, size=(num_nodes,input_dim)
         :param edges: LongTensor, size=(num_edges,2)

@@ -13,7 +13,10 @@ class CompGCNLayer(nn.Module):
         self.W_s = nn.Linear(input_dim, output_dim, bias=False)
         self.W_r = nn.Linear(input_dim, output_dim, bias=False)
 
-    def composition(self, node_embed, rela_embed, mode='add'):
+    def composition(self,
+                    node_embed,
+                    rela_embed,
+                    mode='add'):
         if mode == 'add':
             res = node_embed + rela_embed
         elif mode == 'sub':
@@ -30,7 +33,11 @@ class CompGCNLayer(nn.Module):
             0, des_index.unsqueeze(1).expand_as(message), message)
         return des_unique, message
 
-    def forward(self, node_embed, rela_embed, edges, mode='add'):
+    def forward(self,
+                node_embed,
+                rela_embed,
+                edges,
+                mode='add'):
         """
         :param node_embed:
         :param rela_embed:

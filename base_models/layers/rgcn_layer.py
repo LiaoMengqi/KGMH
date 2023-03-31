@@ -3,7 +3,12 @@ import torch.nn as nn
 
 
 class RGCNLayer(nn.Module):
-    def __init__(self, input_dim, output_dim, num_rels, basis=False, b=10):
+    def __init__(self,
+                 input_dim,
+                 output_dim,
+                 num_rels,
+                 basis=False,
+                 b=10):
         super(RGCNLayer, self).__init__()
         self.basis = basis
         self.input_dim = input_dim
@@ -27,21 +32,26 @@ class RGCNLayer(nn.Module):
             nn.init.xavier_normal_(self.weight)
         return
 
-    def get_relation_weight(self, index: torch.Tensor) -> torch.Tensor:
+    def get_relation_weight(self,
+                            index: torch.Tensor) -> torch.Tensor:
         if self.basis:
             res = torch.einsum('kx,xnm->knm', self.weight[index], self.v_weight)
         else:
             res = self.weight[index]
         return res
 
-    def aggregate(self, message, des):
+    def aggregate(self,
+                  message,
+                  des):
         des_unique, des_index, count = torch.unique(des, return_inverse=True, return_counts=True)
         message = torch.zeros(des_unique.shape[0], message.shape[1], dtype=message.dtype,
                               device=message.device).scatter_add_(
             0, des_index.unsqueeze(1).expand_as(message), message)
         return des_unique, message / count.reshape(-1, 1)
 
-    def forward(self, input_h, edges):
+    def forward(self,
+                input_h,
+                edges):
         """
         :param input_h: node embeddings, shape (num_nodes, input_dim)
         :param edges: list of triplets (src, rel, dst)
@@ -54,7 +64,7 @@ class RGCNLayer(nn.Module):
         # gather relation weights by indices
         weight = self.get_relation_weight(rel)
         index_matrix = torch.zeros(input_h.shape[0], dtype=torch.long, device=weight.device)
-        index_matrix[dst] = torch.arange(dst.shape[0], dtype=torch.long,device=weight.device)
+        index_matrix[dst] = torch.arange(dst.shape[0], dtype=torch.long, device=weight.device)
         msg = torch.bmm(src_h.unsqueeze(1), weight).squeeze(1)
         # sort message corresponding to destination node
         msg = msg[index_matrix[dst]]

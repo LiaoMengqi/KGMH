@@ -5,7 +5,12 @@ from scipy.sparse import csr_matrix
 
 
 class REGCNLayer(nn.Module):
-    def __init__(self, input_dim, output_dim, bias=False, active='rrelu', dtype=torch.float64):
+    def __init__(self,
+                 input_dim,
+                 output_dim,
+                 bias=False,
+                 active='rrelu',
+                 dtype=torch.float64):
         """
         :param input_dim:
         :param output_dim:
@@ -25,10 +30,15 @@ class REGCNLayer(nn.Module):
         elif active == 'tanh':
             self.active = nn.Tanh()
 
-    def calculate_message(self, src, rela):
+    def calculate_message(self,
+                          src,
+                          rela):
         return self.fc_aggregate(src + rela)
 
-    def aggregate(self, message, num_node, des):
+    def aggregate(self,
+                  message,
+                  num_node,
+                  des):
         des_unique, count = torch.unique(des, return_counts=True)
         index_matrix = csr_matrix((np.array(range(des_unique.shape[0]), dtype='int64'),
                                    (des_unique, np.zeros(des_unique.shape[0], dtype='int64'))),

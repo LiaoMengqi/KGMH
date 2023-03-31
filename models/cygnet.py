@@ -12,8 +12,7 @@ import numpy as np
 class CyGNet(nn.Module):
     def __init__(self, model: CyGNetBase,
                  data: DataLoader,
-                 opt: torch.optim.Optimizer
-                 ):
+                 opt: torch.optim.Optimizer):
         super(CyGNet, self).__init__()
         self.data = data
         self.train_data, _, self.train_time = dps.split_data_by_time(self.data.train)
@@ -24,7 +23,10 @@ class CyGNet(nn.Module):
         self.vocabulary = torch.sparse_coo_tensor(size=([data.num_entity * data.num_relation, data.num_entity]),
                                                   device=data.train.device)
 
-    def update_vocabulary(self, entity, rela, target):
+    def update_vocabulary(self,
+                          entity,
+                          rela,
+                          target):
         i = entity * self.data.num_relation + rela
         i = torch.cat([i.unsqueeze(0), target.unsqueeze(0)], dim=0)
         v = torch.ones(i.shape[-1])
@@ -37,7 +39,8 @@ class CyGNet(nn.Module):
         vocabulary = torch.index_select(self.vocabulary, index=i, dim=0)
         return vocabulary.to_dense()
 
-    def train_epoch(self, batch_size):
+    def train_epoch(self,
+                    batch_size):
         self.model.train()
         all_loss = 0
         for i in tqdm(range(len(self.train_data))):
@@ -54,7 +57,9 @@ class CyGNet(nn.Module):
             self.update_vocabulary(self.train_data[i][:, 0], self.train_data[i][:, 1], self.train_data[i][:, 2])
         return all_loss
 
-    def loss(self, score, label) -> torch.Tensor:
+    def loss(self,
+             score,
+             label) -> torch.Tensor:
         return torch.nn.functional.nll_loss(score, label) + self.regularization_loss()
 
     def regularization_loss(self, reg_fact=0.01):

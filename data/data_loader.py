@@ -4,7 +4,9 @@ from utils.data_process import reverse_dict
 
 
 class DataLoader(object):
-    def __init__(self, dataset, path):
+    def __init__(self,
+                 dataset,
+                 path):
         """
         param dataset: the name of dataset
         param path: the path of dataset
@@ -23,7 +25,9 @@ class DataLoader(object):
         self.num_relation = 0
         self.num_entity = 0
 
-    def load(self, load_time=False, encoding='utf-8'):
+    def load(self,
+             load_time=False,
+             encoding='utf-8'):
         """
         Initialize training set, validation set and test set.
         """
