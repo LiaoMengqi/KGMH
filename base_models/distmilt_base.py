@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import math
 
 
 class DistMult(nn.Module):
@@ -11,8 +12,9 @@ class DistMult(nn.Module):
         self.weight_init()
 
     def weight_init(self):
-        nn.init.normal_(self.diag)
-        pass
+        gain = nn.init.calculate_gain('sigmoid')
+        std = gain * math.sqrt(2 / (1 + self.diag.shape[1]))
+        nn.init.normal_(self.diag, mean=0, std=std)
 
     def forward(self,
                 sub_embed,
