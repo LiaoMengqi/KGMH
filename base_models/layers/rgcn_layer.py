@@ -78,8 +78,8 @@ class RGCNLayer(nn.Module):
             res = self.weight[index]
         return res
 
-    def aggregate(self,
-                  message,
+    @staticmethod
+    def aggregate(message,
                   des):
         des_unique, des_index, count = torch.unique(des, return_inverse=True, return_counts=True)
         message = torch.zeros(des_unique.shape[0],

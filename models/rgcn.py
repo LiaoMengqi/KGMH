@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from base_models.regcn_base import RGCNBase
+from base_models.rgcn_base import RGCNBase
 from data.data_loader import DataLoader
 from base_models.distmilt_base import DistMult
 from utils.data_process import generate_negative_sample

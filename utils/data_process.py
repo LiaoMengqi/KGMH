@@ -21,7 +21,7 @@ def split_data_by_time(data: torch.Tensor,
             time_list.append(int(line[3]))
             data_split.append([line[0:3].unsqueeze(0)])
     for i in range(len(data_split)):
-        data_split[i] = torch.cat(data_split[i],dim=0)
+        data_split[i] = torch.cat(data_split[i], dim=0)
     return data_split, time_index, time_list
 
 
