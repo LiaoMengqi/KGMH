@@ -27,7 +27,7 @@ class RGCN(nn.Module):
         if self.mode == 'prediction':
             self.w = w
             self.dist_mult = DistMult(self.model.num_relation, self.model.dims[-1])
-            opt.add_param_group({'params': self.dist_mult.parameters()})
+            self.opt.add_param_group({'params': self.dist_mult.parameters()})
         self.cross_entropy = nn.CrossEntropyLoss(reduction='sum')
 
         self.h = None

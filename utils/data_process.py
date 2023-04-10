@@ -59,3 +59,15 @@ def float_to_int_exp(num):
         num *= 10
         exp += 1
     return int(num), exp
+
+
+def add_reverse_relation(edges: list,
+                         num_relation):
+    res = []
+    for edge in edges:
+        reverse = torch.cat([edge[:, 2].unsqueeze(1),
+                             edge[:, 1].unsqueeze(1) + num_relation,
+                             edge[:, 0].unsqueeze(1)],
+                            dim=1)
+        res.append(torch.cat([edge, reverse], dim=0))
+    return res

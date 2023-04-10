@@ -24,12 +24,10 @@ class URGCNLayer(nn.Module):
 
         self.w_neighbor = nn.Parameter(torch.Tensor(input_dim, output_dim))
         self.dropout = nn.Dropout(dropout)
-
+        self.self_loop = self_loop
         if self_loop:
             self.w_self = nn.Parameter(torch.Tensor(input_dim, output_dim))
             self.w_self_evolve = nn.Parameter(torch.Tensor(input_dim, output_dim))
-        else:
-            self.self_loop = None
 
         if active:
             self.active = nn.ReLU()
@@ -50,7 +48,7 @@ class URGCNLayer(nn.Module):
         :return: the representation of node after aggregation
         """
         # self loop
-        if self.self_loop is not None:
+        if self.self_loop:
             h = torch.mm(nodes_embed, self.w_self)
         else:
             h = nodes_embed

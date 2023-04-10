@@ -8,20 +8,18 @@ class ConvTransEBase(nn.Module):
                  num_channel,
                  kernel_length,
                  active='relu',
-                 dtype=torch.float64,
                  bias=False):
         super(ConvTransEBase, self).__init__()
         self.input_dim = input_dim
         self.c = num_channel
         self.k = kernel_length
-        self.dtype = dtype
         if kernel_length % 2 != 0:
             self.pad = nn.ZeroPad2d((int(kernel_length / 2), int(kernel_length / 2), 0, 0))
         else:
             self.pad = nn.ZeroPad2d((int(kernel_length / 2) - 1, int(kernel_length / 2), 0, 0))
-        self.conv = nn.Conv2d(1, num_channel, (2, kernel_length), dtype=dtype)
+        self.conv = nn.Conv2d(1, num_channel, (2, kernel_length))
         self.flat = nn.Flatten()
-        self.fc = nn.Linear(input_dim * num_channel, input_dim, bias=bias, dtype=dtype)
+        self.fc = nn.Linear(input_dim * num_channel, input_dim, bias=bias)
 
         if active == 'sigmoid':
             self.active = nn.Sigmoid()
@@ -46,8 +44,9 @@ class ConvTransEBase(nn.Module):
         matrix = torch.cat([entity_ebd[query[:, 0]], relation_ebd[query[:, 1]]], dim=1)
         matrix.unsqueeze_(dim=1)
         conv_out = self.flat(self.conv(self.pad(matrix)))
+        # conv_out.sum().backward()
         linear_out = self.active(self.fc(conv_out))
-        linear_out.unsqueeze_(dim=1)
-        entity_ebd.squeeze_(dim=1)
+        linear_out = linear_out.unsqueeze(dim=1)
+        entity_ebd = entity_ebd.squeeze(dim=1)
         scores = torch.sum(entity_ebd * linear_out, dim=2)
         return nn.functional.sigmoid(scores)
