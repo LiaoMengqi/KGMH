@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class ConvTransEBase(nn.Module):
@@ -8,11 +9,17 @@ class ConvTransEBase(nn.Module):
                  num_channel,
                  kernel_length,
                  active='relu',
+                 dropout=0.0,
                  bias=False):
         super(ConvTransEBase, self).__init__()
         self.input_dim = input_dim
         self.c = num_channel
         self.k = kernel_length
+        self.dropout = torch.nn.Dropout(dropout)
+        self.bn0 = torch.nn.BatchNorm1d(2)
+        self.bn1 = torch.nn.BatchNorm1d(self.c)
+        self.bn2 = torch.nn.BatchNorm1d(input_dim)
+
         if kernel_length % 2 != 0:
             self.pad = nn.ZeroPad2d((int(kernel_length / 2), int(kernel_length / 2), 0, 0))
         else:
@@ -39,14 +46,20 @@ class ConvTransEBase(nn.Module):
         :return: Tensor,size=(num_query, num_entity), the item with the index of (i,j) in this tensor measures the
         possibility of entity j being the objective entity of query i.
         """
-        entity_ebd = entity_ebd.unsqueeze(dim=1)
-        relation_ebd = relation_ebd.unsqueeze(dim=1)
-        matrix = torch.cat([entity_ebd[query[:, 0]], relation_ebd[query[:, 1]]], dim=1)
-        matrix.unsqueeze_(dim=1)
-        conv_out = self.flat(self.conv(self.pad(matrix)))
-        # conv_out.sum().backward()
-        linear_out = self.active(self.fc(conv_out))
-        linear_out = linear_out.unsqueeze(dim=1)
-        entity_ebd = entity_ebd.squeeze(dim=1)
-        scores = torch.sum(entity_ebd * linear_out, dim=2)
-        return nn.functional.sigmoid(scores)
+        x = torch.cat([entity_ebd.unsqueeze(dim=1)[query[:, 0]],
+                       relation_ebd.unsqueeze(dim=1)[query[:, 1]]],
+                      dim=1)
+        x = self.bn0(x)
+        x = self.dropout(x)
+        x.unsqueeze_(dim=1)
+        x = self.conv(self.pad(x))
+        x = self.bn1(x.squeeze())
+        x = F.relu(x)
+        x = self.dropout(x)
+        x = self.flat(x)
+        x = self.fc(x)
+        x = self.dropout(x)
+        x = self.bn2(x)
+        x = F.relu(x)
+        scores = torch.mm(x, entity_ebd.transpose(0, 1))
+        return scores

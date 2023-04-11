@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from base_models.layers.rgcn_layer import RGCNLayer
+import torch.nn.functional as F
 
 
 class URGCNLayer(nn.Module):
@@ -9,8 +10,7 @@ class URGCNLayer(nn.Module):
                  output_dim,
                  active=False,
                  dropout=0.0,
-                 self_loop=True,
-                 skip_connect=False):
+                 self_loop=True):
         """
         :param input_dim:
         :param output_dim:
@@ -20,19 +20,19 @@ class URGCNLayer(nn.Module):
         super(URGCNLayer, self).__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
+        self.active = active
+        self.dropout = nn.Dropout(p=dropout)
         # components
 
         self.w_neighbor = nn.Parameter(torch.Tensor(input_dim, output_dim))
-        self.dropout = nn.Dropout(dropout)
+
         self.self_loop = self_loop
+
         if self_loop:
             self.w_self = nn.Parameter(torch.Tensor(input_dim, output_dim))
             self.w_self_evolve = nn.Parameter(torch.Tensor(input_dim, output_dim))
 
-        if active:
-            self.active = nn.ReLU()
-        else:
-            self.active = None
+        self.init_weight()
 
     def init_weight(self):
         nn.init.xavier_uniform_(self.w_neighbor, gain=nn.init.calculate_gain('relu'))
@@ -47,19 +47,24 @@ class URGCNLayer(nn.Module):
         :param edges: Tensor, size=(num_edge, 3), with the format of (source node, edge, destination node)
         :return: the representation of node after aggregation
         """
-        # self loop
+        # self loop message
         if self.self_loop:
-            h = torch.mm(nodes_embed, self.w_self)
+            sl_msg = torch.mm(nodes_embed, self.w_self_evolve)
+            sl_index = torch.unique(edges[:, 2])
+            sl_msg[sl_index] = torch.mm(nodes_embed[sl_index], self.w_self)
         else:
-            h = nodes_embed
+            sl_msg = None
         # calculate message
-        message = torch.mm(nodes_embed[edges[:, 0]] + relation_embed[edges[:, 1]],
-                           self.w_neighbor)
+        msg = torch.mm(nodes_embed[edges[:, 0]] + relation_embed[edges[:, 1]],
+                       self.w_neighbor)
         # aggregate
-        des_index, message = RGCNLayer.aggregate(message, edges[:, 2])
+        agg_index, msg_agg = RGCNLayer.aggregate(msg, edges[:, 2])
         # send message
-        h[des_index] = h[des_index] + message
+        new_nodes_embed = nodes_embed.clone()
+        new_nodes_embed[agg_index] += msg_agg
+        if self.self_loop:
+            new_nodes_embed = new_nodes_embed + sl_msg
         if self.active is not None:
-            h = self.active(h)
-        h = self.dropout(h)
-        return h
+            torch.relu_(new_nodes_embed)
+        new_nodes_embed = self.dropout(new_nodes_embed)
+        return new_nodes_embed

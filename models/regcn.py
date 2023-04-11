@@ -27,8 +27,8 @@ class REGCN(nn.Module):
 
         self.cross_entropy_loss = nn.CrossEntropyLoss()
         self.decoder = ConvTransEBase(model.hidden_dim,
-                                      num_channel=10,
-                                      kernel_length=4)
+                                      num_channel=50,
+                                      kernel_length=3)
         self.opt.add_param_group({'params': self.decoder.parameters()})
 
     def train_epoch(self):
@@ -36,23 +36,27 @@ class REGCN(nn.Module):
         self.opt.zero_grad()
         # add reverse relation to graph
         data = dps.add_reverse_relation(self.train_data, self.data.num_relation)
+        # target time for predict
         index = list(range(len(data)))
         random.shuffle(index)
         total_loss = 0
         for i in tqdm(index):
             if i == 0:
+                # no history data
                 continue
+            # history data
             if i >= self.seq_len:
                 edges = data[i - self.seq_len:i]
             else:
                 edges = data[0:i]
             evolved_entity_embed, evolved_relation_embed = self.model.forward(edges)
+            # put into a decoder to calculate score for object
             score = self.decoder(evolved_entity_embed, evolved_relation_embed, data[i][:, :2])
-            # score.sum().backward()
+            # calculate loss
             loss = self.loss(score, data[i][:, 2])
             loss.backward()
             total_loss = total_loss + float(loss)
-            # clip
+            # clip gradient
             torch.nn.utils.clip_grad_norm_(self.parameters(), self.grad_norm)
             self.opt.step()
         return total_loss
@@ -61,7 +65,7 @@ class REGCN(nn.Module):
              mode='valid',
              metric_list=None):
         if metric_list is None:
-            metric_list = ['hist@1', 'hist@3', 'hist@10']
+            metric_list = ['hist@3', 'hist@10', 'mr']
         if mode == 'valid':
             data = self.valid_data
             history = self.train_data
