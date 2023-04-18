@@ -1,4 +1,5 @@
 import torch
+import json
 
 
 def load_data(file: str,
@@ -30,3 +31,23 @@ def load_dict(file: str,
             items = line.split()
             dict_data[items[0]] = int(items[1])
     return dict_data
+
+
+def save_to_json(content: dict, path='./', name='model'):
+    """
+    save experimental data
+    :param data: dict with format {str:list}
+    :param path: saved file path
+    :param name: saved file name
+    :return: None
+    """
+    f = open(path + name + '.json', 'w', encoding='utf-8')
+    json.dump(content, f)
+    f.close()
+
+
+def load_from_json(path='./', name='model'):
+    f = open(path + name + '.json', 'r', encoding='utf-8')
+    content = json.load(f)
+    f.close()
+    return content
