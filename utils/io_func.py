@@ -1,5 +1,6 @@
 import torch
 import json
+import os
 
 
 def load_data(file: str,
@@ -33,21 +34,62 @@ def load_dict(file: str,
     return dict_data
 
 
-def save_to_json(content: dict, path='./', name='model'):
+def to_json(content,
+            path='./result/',
+            name='model'):
     """
     save experimental data
-    :param data: dict with format {str:list}
+    :param content: content to save
     :param path: saved file path
     :param name: saved file name
     :return: None
     """
+    if not os.path.exists(path):
+        # create new directory
+        os.mkdir(path)
     f = open(path + name + '.json', 'w', encoding='utf-8')
     json.dump(content, f)
     f.close()
 
 
-def load_from_json(path='./', name='model'):
+def from_json(path='./result/',
+              name='model'):
+    """
+    load data
+    :param path:file path
+    :param name: file name
+    :return: data loaded
+    """
     f = open(path + name + '.json', 'r', encoding='utf-8')
     content = json.load(f)
     f.close()
     return content
+
+
+def save_checkpoint(model: torch.nn.Module,
+                    name: str,
+                    path='./checkpoint/'):
+    """
+    save checkpoint
+    :param model: model
+    :param name: model name
+    :param path: path to save
+    :return: None
+    """
+    if not os.path.exists(path):
+        # create new directory
+        os.mkdir(path)
+    torch.save(model.state_dict(), path + name)
+
+
+def load_checkpoint(model: torch.nn.Module,
+                    name: str,
+                    path='./checkpoint/'):
+    """
+    load checkpoint
+    :param model: model
+    :param name: model name
+    :param path: path where checkpoint saved
+    :return: None
+    """
+    model.load_state_dict(torch.load(path + name))

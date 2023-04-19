@@ -2,6 +2,9 @@ import argparse
 from models.__list__ import *
 from base_models.__list__ import *
 import torch
+from utils.io_func import save_checkpoint
+from utils.io_func import to_json
+from utils.plot import hist_value
 
 opt_list = {
     'sgd': torch.optim.SGD,
@@ -9,7 +12,46 @@ opt_list = {
 }
 
 
-def run(args):
+def train(model, epochs, batch_size, step):
+    name = model.get_name()
+    metric_history = {}
+    loss_history = []
+    for epoch in range(epochs):
+        loss = model.train_epoch(batch_size=batch_size)
+        loss_history.append(loss)
+        print('epoch: %d |loss: %f ' % (epoch + 1, loss))
+        if (epoch + 1) % step == 0:
+            metrics = model.test(batch_size=batch_size)
+            for key in metrics.keys():
+                if key not in metric_history.keys():
+                    metric_history[key] = []
+                    metric_history[key].append(metrics[key])
+                else:
+                    metric_history[key].append(metrics[key])
+    # plot
+    hist_value({'hist@1': metric_history['hist@1'],
+                'hist@3': metric_history['hist@3'],
+                'hist@10': metric_history['hist@10'],
+                'hist@100': metric_history['hist@100']},
+               name=name + 'hist@k')
+    hist_value({'mr': metric_history['mr']},
+               name=name + 'mr')
+    hist_value({'mrr': metric_history['mrr']},
+               name=name + 'mrr')
+    hist_value({'loss': loss_history},
+               name=name + 'loss')
+    # save model
+    save_checkpoint(model, name=name)
+    # save train history
+    to_json(metric_history, name=name + 'metrics')
+    to_json(loss_history, name=name + 'loss')
+
+
+def evaluate(model, batch_size, data='test'):
+    pass
+
+
+def main(args):
     # choose device
     if args.gpu:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -21,7 +63,7 @@ def run(args):
     data.to(device)
     # base model
     if args.conf:
-        base_model = None
+        base_model = get_base_model(args, data)
     else:
         base_model = get_default_base_model(args.model, data)
     base_model.to(device)
@@ -30,11 +72,12 @@ def run(args):
     # model
     model = model_list[args.model](base_model, data, opt)
     model.to(device)
-    for epoch in range(args.epoch):
-        loss = model.train_epoch()
-        print('epoch: %d |loss: %f ' % (epoch + 1, loss))
-        if (epoch + 1) % args.eva_step == 0:
-            metrics = model.test()
+    # load checkpoint
+    # ...
+    # train
+    train(model, args.epoch, args.batch_size, args.eva_step)
+    # evaluate
+    evaluate(model, args.batch_size)
 
 
 if __name__ == '__main__':
@@ -57,11 +100,11 @@ if __name__ == '__main__':
     parser.add_argument("--lr", type=float, default=1e-3,
                         help="learning rate")
     # train
-    parser.add_argument("--epoch", type=int, default=30,
+    parser.add_argument("--epoch", type=int, default=3,
                         help="learning rate")
     parser.add_argument("--batch-size", type=int, default=1024,
                         help="learning rate")
-    parser.add_argument("--eva-step", type=int, default=5,
+    parser.add_argument("--eva-step", type=int, default=1,
                         help="learning rate")
     # other
     parser.add_argument("--test", action='store_true', default=False,
@@ -69,4 +112,5 @@ if __name__ == '__main__':
     parser.add_argument("--gpu", action='store_true', default=True,
                         help="use GPU")
     args_parsed = parser.parse_args()
-    run(args_parsed)
+
+    main(args_parsed)

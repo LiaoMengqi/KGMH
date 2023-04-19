@@ -40,7 +40,7 @@ class CyGNet(nn.Module):
         return vocabulary.to_dense()
 
     def train_epoch(self,
-                    batch_size):
+                    batch_size=512):
         self.model.train()
         all_loss = 0
         for i in tqdm(range(len(self.train_data))):
@@ -68,12 +68,11 @@ class CyGNet(nn.Module):
         return regularization_loss * reg_fact
 
     def test(self,
-             batch_size,
+             batch_size=512,
              dataset='valid',
-             mode='obj',
              metric_list=None):
         if metric_list is None:
-            metric_list = ['hist@1', 'hist@10', 'hist@100', 'mr']
+            metric_list = ['hist@1', 'hist@3', 'hist@10', 'hist@100', 'mr', 'mrr']
         if dataset == 'valid':
             data = self.valid_data
             time_list = self.valid_time
@@ -94,3 +93,7 @@ class CyGNet(nn.Module):
         all_rank = np.concatenate(rank_list)
         metrics = mtc.ranks_to_metrics(metric_list, all_rank)
         return metrics
+
+    def get_name(self):
+        name = 'cygnet'
+        return name

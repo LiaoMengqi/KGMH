@@ -1,14 +1,34 @@
 import torch
 from base_models.regcn_base import REGCNBase
+from base_models.cygnet_base import CyGNetBase
 from data.data_loader import DataLoader
 
 base_models_list = {
-    'regcn': REGCNBase
+    'regcn': REGCNBase,
+    'cygnet': CyGNetBase
 }
 
 
-def get_default_base_model(model: str, data: DataLoader) -> torch.nn.Module:
-    base_model = None
+def get_base_model(args,
+                   data: DataLoader,
+                   ) -> torch.nn.Module:
+    """
+    get base model with configuration
+    :param data: dataset
+    :param args: parameters
+    :return: base model
+    """
+    raise NotImplementedError
+
+
+def get_default_base_model(model: str,
+                           data: DataLoader) -> torch.nn.Module:
+    """
+    get base model with default parameter
+    :param model: model name
+    :param data: dataset
+    :return: base model
+    """
     if model == 'regcn':
         base_model = REGCNBase(
             num_entity=data.num_entity,
@@ -20,6 +40,14 @@ def get_default_base_model(model: str, data: DataLoader) -> torch.nn.Module:
             active=True,
             self_loop=True,
             layer_norm=True)
+    elif model == 'cygnet':
+        base_model = CyGNetBase(
+            num_entity=data.num_entity,
+            num_relation=data.num_relation,
+            h_dim=64,
+            alpha=0.5,
+            penalty=-100
+        )
     else:
         raise Exception('model ' + model + ' not exist!')
     return base_model

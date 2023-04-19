@@ -31,7 +31,7 @@ class REGCN(nn.Module):
                                       kernel_length=3)
         self.opt.add_param_group({'params': self.decoder.parameters()})
 
-    def train_epoch(self):
+    def train_epoch(self, batch_size=512):
         self.model.train()
         self.opt.zero_grad()
         # add reverse relation to graph
@@ -62,10 +62,11 @@ class REGCN(nn.Module):
         return total_loss
 
     def test(self,
+             batch_size=512,
              mode='valid',
              metric_list=None):
         if metric_list is None:
-            metric_list = ['hist@3', 'hist@10', 'mr']
+            metric_list = ['hist@1', 'hist@3', 'hist@10', 'hist@100', 'mr', 'mrr']
         if mode == 'valid':
             data = self.valid_data
             history = self.train_data
@@ -94,3 +95,10 @@ class REGCN(nn.Module):
 
     def loss(self, score, target):
         return self.cross_entropy_loss(score, target)
+
+    def get_name(self):
+        name = 'regcn'
+        dataset = self.data.dataset
+        hidden_dim = self.model.hidden_dim
+        seq_len = self.model.seq_len
+        return name + dataset + 'd' + str(hidden_dim) + 'sl' + str(seq_len)
