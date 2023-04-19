@@ -64,7 +64,7 @@ class URGCNLayer(nn.Module):
         new_nodes_embed[agg_index] += msg_agg
         if self.self_loop:
             new_nodes_embed = new_nodes_embed + sl_msg
-        if self.active is not None:
+        if self.active:
             torch.relu_(new_nodes_embed)
         new_nodes_embed = self.dropout(new_nodes_embed)
         return new_nodes_embed

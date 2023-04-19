@@ -1,39 +1,23 @@
 import torch.optim
 from utils.plot import hist_value
 from data.data_loader import DataLoader
-from base_models.regcn_base import REGCNBase
-from models.regcn import REGCN
+from base_models.cen_base import CENBase
+from models.cen import CEN
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-input_dim = 32
-hidden_dim = 32
-seq_len = 10
-num_layer = 2
-
-dropout = 0.2
-weight_decay = 1e-5
-lr = 0.001
-epochs = 20
+epochs = 10
+batch_size = 128
+step = 2
 
 data = DataLoader('ICEWS14s', './data/temporal/extrapolation')
 data.load(load_time=True)
 data.to(device)
-base = REGCNBase(data.num_entity,
-                 data.num_relation,
-                 hidden_dim,
-                 seq_len,
-                 num_layer,
-                 dropout=dropout,
-                 active=True
-                 )
-base.to(device)
 
-opt = torch.optim.Adam(base.parameters(), lr=lr, weight_decay=weight_decay)
-model = REGCN(base, data, opt)
-model.to(device)
+base = CENBase(data.num_entity, data.num_relation, dim=64, dropout=0.2)
+opt = torch.optim.Adam(base.parameters(), lr=1e-3)
+model = CEN(base, data, opt)
 
-step = 1
 metric_history = {}
 loss_history = []
 for i in range(epochs):
