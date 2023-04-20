@@ -1,11 +1,14 @@
 import torch
 from base_models.regcn_base import REGCNBase
 from base_models.cygnet_base import CyGNetBase
+from base_models.cen_base import CENBase
+
 from data.data_loader import DataLoader
 
 base_models_list = {
     'regcn': REGCNBase,
-    'cygnet': CyGNetBase
+    'cygnet': CyGNetBase,
+    'cen': CENBase
 }
 
 
@@ -47,6 +50,13 @@ def get_default_base_model(model: str,
             h_dim=64,
             alpha=0.5,
             penalty=-100
+        )
+    elif model == 'cen':
+        base_model = CENBase(
+            num_entity=data.num_entity,
+            num_relation=data.num_relation,
+            dim=64,
+            dropout=0.2
         )
     else:
         raise Exception('model ' + model + ' not exist!')

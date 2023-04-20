@@ -63,14 +63,14 @@ class REGCN(nn.Module):
 
     def test(self,
              batch_size=512,
-             mode='valid',
+             dataset='valid',
              metric_list=None):
         if metric_list is None:
             metric_list = ['hist@1', 'hist@3', 'hist@10', 'hist@100', 'mr', 'mrr']
-        if mode == 'valid':
+        if dataset == 'valid':
             data = self.valid_data
             history = self.train_data
-        elif mode == 'test':
+        elif dataset == 'test':
             data = self.test_data
             history = self.valid_data
         else:

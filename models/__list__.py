@@ -1,9 +1,11 @@
 from models.cygnet import CyGNet
 from models.regcn import REGCN
+from models.cen import CEN
 
 model_list = {
     'cygnet': CyGNet,
-    'regcn': REGCN
+    'regcn': REGCN,
+    'cen': CEN
 }
 
 

@@ -92,4 +92,7 @@ def load_checkpoint(model: torch.nn.Module,
     :param path: path where checkpoint saved
     :return: None
     """
+    if not os.path.exists(path + name):
+        # create new directory
+        raise Exception('There is no checkpoint named ' + name + ' in ' + path)
     model.load_state_dict(torch.load(path + name))

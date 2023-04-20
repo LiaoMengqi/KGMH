@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
-from base_models.rgcn_base import RGCNBase
 import torch.nn.functional as F
+from base_models.regcn_base import URGCNBase
+import math
 
 
 class CENBase(nn.Module):
@@ -12,74 +13,113 @@ class CENBase(nn.Module):
                  dropout=0.0,
                  c=50,
                  w=3,
-                 k=10):
+                 k=10,
+                 layer_norm=True):
         super(CENBase, self).__init__()
         self.c = c
         self.w = w
         self.k = k
         self.dim = dim
         self.num_entity = num_entity
+        self.layer_norm = layer_norm
 
         self.entity_embed = nn.Parameter(torch.Tensor(num_entity, dim))
-        self.relation_embed = nn.Parameter(torch.Tensor(num_relation, dim))
+        self.relation_embed = nn.Parameter(torch.Tensor(num_relation * 2, dim))
 
         self.encoder = KGSEncoder(dim,
-                                  num_relation)
+                                  num_relation * 2,
+                                  dropout=dropout)
         self.decoder = ERDecoder(dim,
+                                 seq_len=k,
                                  num_channel=c,
                                  kernel_length=w,
                                  dropout=dropout)
         self.dropout = nn.Dropout(dropout)
         self.fc = nn.Linear(c * dim, dim, bias=False)
-        self.bn = torch.nn.BatchNorm1d(dim)
+        self.bn_list = torch.nn.ModuleList()
+        for _ in range(k):
+            self.bn_list.append(torch.nn.BatchNorm1d(dim))
+        self.init_weight()
 
     def init_weight(self):
-        pass
+        torch.nn.init.normal_(self.entity_embed)
+        torch.nn.init.xavier_normal_(self.relation_embed)
 
     def forward(self,
                 history_graph: list,
                 target_graph):
         length = len(history_graph)
-        score = torch.zeros(len(target_graph), self.num_entity)
+        score = torch.zeros(len(target_graph), self.num_entity, device=target_graph.device)
         for i in range(self.k):
             # length from 1 to k
             if i + 1 > length:
                 break
-            entity_evolved_embed = self.encoder(history_graph[-(i + 1):], h_input=self.entity_embed)
+            x = self.encoder(history_graph[-(i + 1):],
+                             entity_embed=self.entity_embed,
+                             relation_embed=self.relation_embed)
             # size=(num_query,dim*c)
-            x = self.decoder(entity_evolved_embed, self.relation_embed, target_graph[:, [0, 1]])
+            x = self.decoder(x, self.relation_embed, target_graph[:, [0, 1]], i)
             # size=(num_query,dim)
             x = self.fc(x)
             x = self.dropout(x)
-            x = self.bn(x)
-            x = F.relu(x)
+            x = self.bn_list[i](x)
+            F.relu_(x)
             # size=(num_query,num_entity)
             x = torch.mm(x, self.entity_embed.transpose(0, 1))
-            score = score + x
+            score.add_(x)
         return score
 
 
 class KGSEncoder(nn.Module):
     def __init__(self,
                  dim,
-                 num_relation):
+                 num_relation,
+                 dropout=0.0,
+                 layer_norm=True):
         super(KGSEncoder, self).__init__()
-        self.rgcn = RGCNBase([dim, dim, dim], num_relation)
+        self.layer_norm = layer_norm
+        self.rgcn = URGCNBase(dim,
+                              num_layer=2,
+                              active=False,
+                              dropout=dropout,
+                              self_loop=True)
+        self.time_gate_weight = nn.Parameter(torch.Tensor(dim, dim))
+        self.time_gate_bias = nn.Parameter(torch.Tensor(dim))
+        self.init_weight()
+
+    def init_weight(self):
+        nn.init.xavier_uniform_(self.time_gate_weight, gain=nn.init.calculate_gain('relu'))
+        nn.init.zeros_(self.time_gate_bias)
+
+    def normalize(self, tensor):
+        """
+        perform F2 Normalization
+        :param tensor: tensor to be normalized
+        :return: return tensor normalized if using layer normalization ,else return origin tensor
+        """
+        return F.normalize(tensor) if self.layer_norm else tensor
 
     def forward(self,
                 edges: list,
-                entity_embed_init):
-        entity_embed = entity_embed_init
+                entity_embed,
+                relation_embed):
+        entity_embed = self.normalize(entity_embed)
+        relation_embed = self.normalize(relation_embed)
         for edge in edges:
-            entity_embed = self.rgcn.forward(edge, h_input=entity_embed)
+            current_embed = self.rgcn.forward(entity_embed, relation_embed, edge)
+            current_embed = self.normalize(current_embed)
+            time_weight = F.sigmoid(torch.mm(entity_embed, self.time_gate_weight) + self.time_gate_bias)
+            entity_embed = time_weight * current_embed + (1 - time_weight) * entity_embed
+            entity_embed = self.normalize(entity_embed)
         return entity_embed
 
 
 class ERDecoder(nn.Module):
     def __init__(self,
                  input_dim,
-                 num_channel,
-                 kernel_length,
+                 seq_len,
+                 num_channel=50,
+                 kernel_length=3,
                  dropout=0.0,
                  bias=False):
         super(ERDecoder, self).__init__()
@@ -87,26 +127,32 @@ class ERDecoder(nn.Module):
         self.c = num_channel
         self.k = kernel_length
         self.dropout = torch.nn.Dropout(dropout)
-        self.bn0 = torch.nn.BatchNorm1d(2)
-        self.bn1 = torch.nn.BatchNorm1d(self.c)
+        self.bn0_list = torch.nn.ModuleList()
+        self.bn1_list = torch.nn.ModuleList()
 
+        self.conv_list = torch.nn.ModuleList()
         if kernel_length % 2 != 0:
             self.pad = nn.ZeroPad2d((int(kernel_length / 2), int(kernel_length / 2), 0, 0))
         else:
             self.pad = nn.ZeroPad2d((int(kernel_length / 2) - 1, int(kernel_length / 2), 0, 0))
-        self.conv = nn.Conv2d(1, num_channel, (2, kernel_length))
+
+        for _ in range(seq_len):
+            self.conv_list.append(nn.Conv2d(1, num_channel, (2, kernel_length)))
+            self.bn0_list.append(torch.nn.BatchNorm1d(2))
+            self.bn1_list.append(torch.nn.BatchNorm1d(num_channel))
+
         self.flat = nn.Flatten()
         self.fc = nn.Linear(input_dim * num_channel, input_dim, bias=bias)
 
-    def forward(self, entity_ebd, relation_ebd, query):
+    def forward(self, entity_ebd, relation_ebd, query, seq_len):
         x = torch.cat([entity_ebd.unsqueeze(dim=1)[query[:, 0]],
                        relation_ebd.unsqueeze(dim=1)[query[:, 1]]],
                       dim=1)
-        x = self.bn0(x)
+        x = self.bn0_list[seq_len](x)
         x = self.dropout(x)
         x.unsqueeze_(dim=1)
-        x = self.conv(self.pad(x))
-        x = self.bn1(x.squeeze())
+        x = self.conv_list[seq_len](self.pad(x))
+        x = self.bn1_list[seq_len](x.squeeze())
         x = F.relu(x)
         x = self.dropout(x)
         x = self.flat(x)

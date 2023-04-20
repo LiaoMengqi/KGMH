@@ -3,6 +3,7 @@ from models.__list__ import *
 from base_models.__list__ import *
 import torch
 from utils.io_func import save_checkpoint
+from utils.io_func import load_checkpoint
 from utils.io_func import to_json
 from utils.plot import hist_value
 
@@ -22,6 +23,12 @@ def train(model, epochs, batch_size, step):
         print('epoch: %d |loss: %f ' % (epoch + 1, loss))
         if (epoch + 1) % step == 0:
             metrics = model.test(batch_size=batch_size)
+            print('hist@1 %f |hist@3 %f |hist@10 %f |hist@100 %f |mr %f |mrr %f' % (metrics['hist@1'],
+                                                                                    metrics['hist@3'],
+                                                                                    metrics['hist@10'],
+                                                                                    metrics['hist@100'],
+                                                                                    metrics['mr'],
+                                                                                    metrics['mrr']))
             for key in metrics.keys():
                 if key not in metric_history.keys():
                     metric_history[key] = []
@@ -33,22 +40,30 @@ def train(model, epochs, batch_size, step):
                 'hist@3': metric_history['hist@3'],
                 'hist@10': metric_history['hist@10'],
                 'hist@100': metric_history['hist@100']},
-               name=name + 'hist@k')
+               name=name + '_valid_hist@k')
     hist_value({'mr': metric_history['mr']},
-               name=name + 'mr')
+               name=name + '_valid_mr')
     hist_value({'mrr': metric_history['mrr']},
-               name=name + 'mrr')
+               name=name + '_valid_mrr')
     hist_value({'loss': loss_history},
-               name=name + 'loss')
+               name=name + '_valid_loss')
     # save model
     save_checkpoint(model, name=name)
     # save train history
-    to_json(metric_history, name=name + 'metrics')
-    to_json(loss_history, name=name + 'loss')
+    to_json(metric_history, name=name + '_valid_result')
+    to_json(loss_history, name=name + '_train_loss')
 
 
 def evaluate(model, batch_size, data='test'):
-    pass
+    name = model.get_name()
+    metrics = model.test(batch_size=batch_size, dataset='test')
+    print('hist@1 %f |hist@3 %f |hist@10 %f |hist@100 %f |mr %f |mrr %f' % (metrics['hist@1'],
+                                                                            metrics['hist@3'],
+                                                                            metrics['hist@10'],
+                                                                            metrics['hist@100'],
+                                                                            metrics['mr'],
+                                                                            metrics['mrr']))
+    to_json(metrics, name=name + '_test_result')
 
 
 def main(args):
@@ -73,11 +88,14 @@ def main(args):
     model = model_list[args.model](base_model, data, opt)
     model.to(device)
     # load checkpoint
-    # ...
-    # train
-    train(model, args.epoch, args.batch_size, args.eva_step)
-    # evaluate
-    evaluate(model, args.batch_size)
+    if args.checkpoint is not None:
+        load_checkpoint(model, name=args.checkpoint)
+    if args.test:
+        # evaluate
+        evaluate(model, args.batch_size)
+    else:
+        # train
+        train(model, args.epoch, args.batch_size, args.eva_step)
 
 
 if __name__ == '__main__':
@@ -100,15 +118,19 @@ if __name__ == '__main__':
     parser.add_argument("--lr", type=float, default=1e-3,
                         help="learning rate")
     # train
-    parser.add_argument("--epoch", type=int, default=3,
+    parser.add_argument("--epoch", type=int, default=30,
                         help="learning rate")
     parser.add_argument("--batch-size", type=int, default=1024,
                         help="learning rate")
     parser.add_argument("--eva-step", type=int, default=1,
                         help="learning rate")
+    # test
+    parser.add_argument('--checkpoint', type=str, default=None,
+                        help='path and name of model saved')
     # other
     parser.add_argument("--test", action='store_true', default=False,
                         help="load stat from dir and directly test")
+
     parser.add_argument("--gpu", action='store_true', default=True,
                         help="use GPU")
     args_parsed = parser.parse_args()

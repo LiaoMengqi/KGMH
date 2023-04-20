@@ -5,18 +5,20 @@ from base_models.cen_base import CENBase
 from models.cen import CEN
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
+# device = 'cpu'
 epochs = 10
 batch_size = 128
-step = 2
+step = 1
 
 data = DataLoader('ICEWS14s', './data/temporal/extrapolation')
 data.load(load_time=True)
 data.to(device)
 
 base = CENBase(data.num_entity, data.num_relation, dim=64, dropout=0.2)
-opt = torch.optim.Adam(base.parameters(), lr=1e-3)
+base.to(device)
+opt = torch.optim.Adam(base.parameters(), lr=1e-3, weight_decay=1e-5)
 model = CEN(base, data, opt)
+model.to(device)
 
 metric_history = {}
 loss_history = []
