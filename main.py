@@ -6,6 +6,7 @@ from utils.io_func import save_checkpoint
 from utils.io_func import load_checkpoint
 from utils.io_func import to_json
 from utils.plot import hist_value
+import time
 
 opt_list = {
     'sgd': torch.optim.SGD,
@@ -13,54 +14,103 @@ opt_list = {
 }
 
 
+def get_opt(args,
+            model: torch.nn.Module):
+    opt = None
+    if args.opt == 'sgd':
+        opt = torch.optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    elif args.opt == 'adam':
+        opt = torch.optim.Adam(model.parameters(),
+                               lr=args.lr,
+                               weight_decay=args.weight_decay,
+                               amsgrad=args.amsgrad,
+                               eps=args.eps)
+
+    return opt
+
+
 def train(model, epochs, batch_size, step):
+    """
+    train model
+    :param model: model
+    :param epochs: train epoch
+    :param batch_size: batch size
+    :param step: step to evaluate model on valid set
+    :return: None
+    """
     name = model.get_name()
     metric_history = {}
     loss_history = []
+    train_time = []
+    evaluate_time = []
     for epoch in range(epochs):
+        time_start = time.time()
         loss = model.train_epoch(batch_size=batch_size)
+        time_end = time.time()
+        train_time.append(time_end - time_start)
         loss_history.append(loss)
-        print('epoch: %d |loss: %f ' % (epoch + 1, loss))
+        print('epoch: %d |loss: %f |time: %fs' % (epoch + 1, loss, time_end - time_start))
+
         if (epoch + 1) % step == 0:
+            time_start = time.time()
             metrics = model.test(batch_size=batch_size)
-            print('hist@1 %f |hist@3 %f |hist@10 %f |hist@100 %f |mr %f |mrr %f' % (metrics['hist@1'],
-                                                                                    metrics['hist@3'],
-                                                                                    metrics['hist@10'],
-                                                                                    metrics['hist@100'],
-                                                                                    metrics['mr'],
-                                                                                    metrics['mrr']))
+            time_end = time.time()
+            evaluate_time.append(time_end - time_start)
+            print('hits@1: %f |hits@3: %f |hits@10: %f |hits@100: %f |mr: %f |mrr: %f |time: %f' %
+                  (metrics['hits@1'],
+                   metrics['hits@3'],
+                   metrics['hits@10'],
+                   metrics['hits@100'],
+                   metrics['mr'],
+                   metrics['mrr'],
+                   time_end - time_start))
             for key in metrics.keys():
                 if key not in metric_history.keys():
                     metric_history[key] = []
                     metric_history[key].append(metrics[key])
                 else:
                     metric_history[key].append(metrics[key])
+
     # plot
-    hist_value({'hist@1': metric_history['hist@1'],
-                'hist@3': metric_history['hist@3'],
-                'hist@10': metric_history['hist@10'],
-                'hist@100': metric_history['hist@100']},
-               name=name + '_valid_hist@k')
+    hist_value({'hits@1': metric_history['hits@1'],
+                'hits@3': metric_history['hits@3'],
+                'hits@10': metric_history['hits@10'],
+                'hits@100': metric_history['hits@100']},
+               value='hits@k',
+               name=name + '_valid_hits@k')
     hist_value({'mr': metric_history['mr']},
+               value='mr',
                name=name + '_valid_mr')
     hist_value({'mrr': metric_history['mrr']},
+               value='mrr',
                name=name + '_valid_mrr')
     hist_value({'loss': loss_history},
+               value='loss',
                name=name + '_valid_loss')
     # save model
     save_checkpoint(model, name=name)
     # save train history
-    to_json(metric_history, name=name + '_valid_result')
-    to_json(loss_history, name=name + '_train_loss')
+    data_to_save = metric_history
+    data_to_save['loss'] = loss_history
+    data_to_save['train_time'] = train_time
+    data_to_save['evaluate_time'] = evaluate_time
+    to_json(data_to_save, name=name)
 
 
 def evaluate(model, batch_size, data='test'):
+    """
+    evaluate model in test set or valid set
+    :param model: model
+    :param batch_size: batch size
+    :param data: dataset
+    :return: None
+    """
     name = model.get_name()
     metrics = model.test(batch_size=batch_size, dataset='test')
-    print('hist@1 %f |hist@3 %f |hist@10 %f |hist@100 %f |mr %f |mrr %f' % (metrics['hist@1'],
-                                                                            metrics['hist@3'],
-                                                                            metrics['hist@10'],
-                                                                            metrics['hist@100'],
+    print('hits@1 %f |hits@3 %f |hits@10 %f |hits@100 %f |mr %f |mrr %f' % (metrics['hits@1'],
+                                                                            metrics['hits@3'],
+                                                                            metrics['hits@10'],
+                                                                            metrics['hits@100'],
                                                                             metrics['mr'],
                                                                             metrics['mrr']))
     to_json(metrics, name=name + '_test_result')
@@ -83,7 +133,7 @@ def main(args):
         base_model = get_default_base_model(args.model, data)
     base_model.to(device)
     # Optimizer
-    opt = opt_list[args.opt](base_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    opt = get_opt(args, base_model)
     # model
     model = model_list[args.model](base_model, data, opt)
     model.to(device)
@@ -105,6 +155,8 @@ if __name__ == '__main__':
                         help="choose model")
     parser.add_argument("--conf", action='store_true', default=False,
                         help="configure parameter")
+    parser.add_argument('--checkpoint', type=str, default=None,
+                        help='path and name of model saved')
     # dataset
     parser.add_argument("--dataset", type=str, required=True,
                         help="choose dataset")
@@ -117,20 +169,22 @@ if __name__ == '__main__':
                         help="momentum")
     parser.add_argument("--lr", type=float, default=1e-3,
                         help="learning rate")
+    parser.add_argument("--eps", type=float, default=1e-8,
+                        help="learning rate")
+    parser.add_argument("--amsgrad", action='store_true', default=False,
+                        help="Adam optimizer parameter")
+
     # train
-    parser.add_argument("--epoch", type=int, default=30,
+    parser.add_argument("--epoch", type=int, default=15,
                         help="learning rate")
     parser.add_argument("--batch-size", type=int, default=1024,
                         help="learning rate")
     parser.add_argument("--eva-step", type=int, default=1,
                         help="learning rate")
     # test
-    parser.add_argument('--checkpoint', type=str, default=None,
-                        help='path and name of model saved')
-    # other
     parser.add_argument("--test", action='store_true', default=False,
                         help="load stat from dir and directly test")
-
+    # other
     parser.add_argument("--gpu", action='store_true', default=True,
                         help="use GPU")
     args_parsed = parser.parse_args()

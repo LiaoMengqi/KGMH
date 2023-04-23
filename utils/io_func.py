@@ -29,7 +29,7 @@ def load_dict(file: str,
         content = content.strip()
         content = content.split("\n")
         for line in content:
-            items = line.split()
+            items = line.split('\t')
             dict_data[items[0]] = int(items[1])
     return dict_data
 

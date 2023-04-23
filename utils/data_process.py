@@ -53,12 +53,14 @@ def batch_data(data: torch.Tensor,
     return res
 
 
-def float_to_int_exp(num):
+def float_to_int_exp(num) -> str:
     exp = 0
     while num % 1 != 0:
         num *= 10
         exp += 1
-    return int(num), exp
+    if exp == 0:
+        return str(int(num))
+    return str(int(num)) + 'e-' + str(exp)
 
 
 def add_reverse_relation(edges: list,

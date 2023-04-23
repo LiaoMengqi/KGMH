@@ -88,5 +88,11 @@ class CEN(nn.Module):
         return metrics
 
     def get_name(self):
-        name = 'cen'
-        return name
+        name = 'cen_'
+        data = self.data.dataset + '_'
+        channel = 'channel' + str(self.model.c) + '_'
+        kernel_width = 'kernel_width' + str(self.model.w) + '_'
+        max_seq_len = 'max_seq_len' + str(self.model.k) + '_'
+        dim = 'dim' + str(self.model.dim) + '_'
+        dropout = 'dropout' + dps.float_to_int_exp(self.model.dropout_value)
+        return name + data + channel + kernel_width + max_seq_len + dim + dropout

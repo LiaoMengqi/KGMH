@@ -43,13 +43,14 @@ class CyGNet(nn.Module):
                     batch_size=512):
         self.model.train()
         all_loss = 0
+        self.vocabulary.zero_()
         for i in tqdm(range(len(self.train_data))):
             time_stamp = self.train_time[i]
             data_batched = dps.batch_data(self.train_data[i], batch_size=batch_size)
             for batch in data_batched:
                 self.opt.zero_grad()
                 score = self.model.forward(batch, self.get_vocabulary(batch[:, 0], batch[:, 1]), time_stamp)
-                loss = self.loss(torch.log(score), batch[:, 2])
+                loss = self.loss(score, batch[:, 2])
                 loss.backward()
                 all_loss = all_loss + float(loss)
                 self.opt.step()
@@ -60,7 +61,7 @@ class CyGNet(nn.Module):
     def loss(self,
              score,
              label) -> torch.Tensor:
-        return torch.nn.functional.nll_loss(score, label) + self.regularization_loss()
+        return torch.nn.functional.nll_loss(score, label) + self.regularization_loss(self.model.reg_fact)
 
     def regularization_loss(self, reg_fact=0.01):
         regularization_loss = torch.mean(self.model.relation_embed.pow(2)) + torch.mean(
@@ -72,7 +73,7 @@ class CyGNet(nn.Module):
              dataset='valid',
              metric_list=None):
         if metric_list is None:
-            metric_list = ['hist@1', 'hist@3', 'hist@10', 'hist@100', 'mr', 'mrr']
+            metric_list = ['hits@1', 'hits@3', 'hits@10', 'hits@100', 'mr', 'mrr']
         if dataset == 'valid':
             data = self.valid_data
             time_list = self.valid_time
@@ -88,12 +89,16 @@ class CyGNet(nn.Module):
             for batch in batches:
                 with torch.no_grad():
                     score = self.model.forward(batch, self.get_vocabulary(batch[:, 0], batch[:, 1]), time_stamp)
-                    rank = mtc.calculate_rank(score.cpu().numpy(), batch[:, 1].cpu().numpy())
+                    rank = mtc.calculate_rank(score.cpu().numpy(), batch[:, 2].cpu().numpy())
                     rank_list.append(rank)
         all_rank = np.concatenate(rank_list)
         metrics = mtc.ranks_to_metrics(metric_list, all_rank)
         return metrics
 
     def get_name(self):
-        name = 'cygnet'
-        return name
+        name = 'cygnet_'
+        dataset = self.data.dataset + '_'
+        alpha = 'alpha' + dps.float_to_int_exp(self.model.alpha) + '_'
+        dim = 'dim' + str(self.model.dim) + '_'
+        penalty = 'penalty' + dps.float_to_int_exp(self.model.penalty)
+        return name + dataset + alpha + dim + penalty

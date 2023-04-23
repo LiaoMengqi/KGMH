@@ -66,7 +66,7 @@ class REGCN(nn.Module):
              dataset='valid',
              metric_list=None):
         if metric_list is None:
-            metric_list = ['hist@1', 'hist@3', 'hist@10', 'hist@100', 'mr', 'mrr']
+            metric_list = ['hits@1', 'hits@3', 'hits@10', 'hits@100', 'mr', 'mrr']
         if dataset == 'valid':
             data = self.valid_data
             history = self.train_data
@@ -97,8 +97,10 @@ class REGCN(nn.Module):
         return self.cross_entropy_loss(score, target)
 
     def get_name(self):
-        name = 'regcn'
-        dataset = self.data.dataset
-        hidden_dim = self.model.hidden_dim
-        seq_len = self.model.seq_len
-        return name + dataset + 'd' + str(hidden_dim) + 'sl' + str(seq_len)
+        name = 'regcn_'
+        dataset = self.data.dataset + '_'
+        dim = 'dim' + str(self.model.hidden_dim) + '_'
+        seq_len = 'seq_len' + str(self.model.seq_len) + '_'
+        layer = 'layer' + str(self.model.num_layer) + '_'
+        dropout = 'dropout' + dps.float_to_int_exp(self.model.dropout_value)
+        return name + dataset + dim + seq_len + layer + dropout

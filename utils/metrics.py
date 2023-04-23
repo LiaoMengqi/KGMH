@@ -25,7 +25,7 @@ def ranks_to_metrics(metric_list: list,
                      ranks):
     metrics = {}
     for metric in metric_list:
-        if re.match(r'hist@\d+', metric):
+        if re.match(r'hits@\d+', metric):
             n = int(re.findall(r'\d+', metric)[0])
             metrics[metric] = calculate_hist(n, ranks)
         elif metric == 'mr':

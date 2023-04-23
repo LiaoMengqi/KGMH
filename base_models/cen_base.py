@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from base_models.regcn_base import URGCNBase
-import math
 
 
 class CENBase(nn.Module):
@@ -22,6 +21,7 @@ class CENBase(nn.Module):
         self.dim = dim
         self.num_entity = num_entity
         self.layer_norm = layer_norm
+        self.dropout_value = dropout
 
         self.entity_embed = nn.Parameter(torch.Tensor(num_entity, dim))
         self.relation_embed = nn.Parameter(torch.Tensor(num_relation * 2, dim))

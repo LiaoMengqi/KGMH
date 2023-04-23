@@ -36,8 +36,8 @@ def get_default_base_model(model: str,
         base_model = REGCNBase(
             num_entity=data.num_entity,
             num_relation=data.num_relation,
-            hidden_dim=64,
-            seq_len=10,
+            hidden_dim=100,
+            seq_len=3,
             num_layer=2,
             dropout=0.2,
             active=True,
@@ -47,7 +47,7 @@ def get_default_base_model(model: str,
         base_model = CyGNetBase(
             num_entity=data.num_entity,
             num_relation=data.num_relation,
-            h_dim=64,
+            h_dim=50,
             alpha=0.5,
             penalty=-100
         )
