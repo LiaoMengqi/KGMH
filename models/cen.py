@@ -21,7 +21,7 @@ class CEN(nn.Module):
         self.train_data, _, self.train_time = dps.split_data_by_time(self.data.train)
         self.valid_data, _, self.valid_time = dps.split_data_by_time(self.data.valid)
         self.test_data, _, self.test_time = dps.split_data_by_time(self.data.test)
-        self.k = model.k
+        self.seq_len = model.seq_len
         self.grad_norm = 1.0
         self.cross_entropy_loss = nn.CrossEntropyLoss()
 
@@ -38,8 +38,8 @@ class CEN(nn.Module):
                 # no history data
                 continue
             # history data
-            if i >= self.k:
-                history_graphs = data[i - self.k:i]
+            if i >= self.seq_len:
+                history_graphs = data[i - self.seq_len:i]
             else:
                 history_graphs = data[0:i]
             score = self.model.forward(history_graphs,
@@ -61,7 +61,7 @@ class CEN(nn.Module):
              dataset='valid',
              metric_list=None):
         if metric_list is None:
-            metric_list = ['hist@1', 'hist@3', 'hist@10', 'hist@100', 'mr', 'mrr']
+            metric_list = ['hits@1', 'hits@3', 'hits@10', 'hits@100', 'mr', 'mrr']
         if dataset == 'valid':
             data = self.valid_data
             history = self.train_data
@@ -71,8 +71,8 @@ class CEN(nn.Module):
         else:
             raise Exception
         data = dps.add_reverse_relation(data, self.data.num_relation)
-        if self.model.k < len(history):
-            history = dps.add_reverse_relation(history[-self.model.k:],
+        if self.model.seq_len < len(history):
+            history = dps.add_reverse_relation(history[-self.model.seq_len:],
                                                self.data.num_relation)
         else:
             history = dps.add_reverse_relation(history,
@@ -90,9 +90,9 @@ class CEN(nn.Module):
     def get_name(self):
         name = 'cen_'
         data = self.data.dataset + '_'
-        channel = 'channel' + str(self.model.c) + '_'
-        kernel_width = 'kernel_width' + str(self.model.w) + '_'
-        max_seq_len = 'max_seq_len' + str(self.model.k) + '_'
+        channel = 'channel' + str(self.model.channel) + '_'
+        kernel_width = 'kernel_width' + str(self.model.width) + '_'
+        max_seq_len = 'max_seq_len' + str(self.model.seq_len) + '_'
         dim = 'dim' + str(self.model.dim) + '_'
         dropout = 'dropout' + dps.float_to_int_exp(self.model.dropout_value)
         return name + data + channel + kernel_width + max_seq_len + dim + dropout

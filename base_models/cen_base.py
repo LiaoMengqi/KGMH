@@ -10,14 +10,14 @@ class CENBase(nn.Module):
                  num_relation,
                  dim,
                  dropout=0.0,
-                 c=50,
-                 w=3,
-                 k=10,
+                 channel=50,
+                 width=3,
+                 seq_len=10,
                  layer_norm=True):
         super(CENBase, self).__init__()
-        self.c = c
-        self.w = w
-        self.k = k
+        self.channel = channel
+        self.width = width
+        self.seq_len = seq_len
         self.dim = dim
         self.num_entity = num_entity
         self.layer_norm = layer_norm
@@ -30,14 +30,14 @@ class CENBase(nn.Module):
                                   num_relation * 2,
                                   dropout=dropout)
         self.decoder = ERDecoder(dim,
-                                 seq_len=k,
-                                 num_channel=c,
-                                 kernel_length=w,
+                                 seq_len=seq_len,
+                                 num_channel=channel,
+                                 kernel_length=width,
                                  dropout=dropout)
         self.dropout = nn.Dropout(dropout)
-        self.fc = nn.Linear(c * dim, dim, bias=False)
+        self.fc = nn.Linear(channel * dim, dim, bias=False)
         self.bn_list = torch.nn.ModuleList()
-        for _ in range(k):
+        for _ in range(seq_len):
             self.bn_list.append(torch.nn.BatchNorm1d(dim))
         self.init_weight()
 
@@ -50,7 +50,7 @@ class CENBase(nn.Module):
                 target_graph):
         length = len(history_graph)
         score = torch.zeros(len(target_graph), self.num_entity, device=target_graph.device)
-        for i in range(self.k):
+        for i in range(self.seq_len):
             # length from 1 to k
             if i + 1 > length:
                 break

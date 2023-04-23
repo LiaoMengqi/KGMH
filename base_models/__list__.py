@@ -55,8 +55,11 @@ def get_default_base_model(model: str,
         base_model = CENBase(
             num_entity=data.num_entity,
             num_relation=data.num_relation,
-            dim=64,
-            dropout=0.2
+            dim=50,
+            dropout=0.2,
+            seq_len=3,
+            channel=50,
+            width=3
         )
     else:
         raise Exception('model ' + model + ' not exist!')
