@@ -36,10 +36,10 @@ def get_default_base_model(model: str,
         base_model = REGCNBase(
             num_entity=data.num_entity,
             num_relation=data.num_relation,
-            hidden_dim=100,
+            hidden_dim=50,
             seq_len=3,
             num_layer=2,
-            dropout=0.2,
+            dropout=0.4,
             active=True,
             self_loop=True,
             layer_norm=True)

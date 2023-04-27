@@ -38,7 +38,8 @@ class ConvTransEBase(nn.Module):
     def forward(self,
                 entity_ebd,
                 relation_ebd,
-                query):
+                query,
+                training=True):
         """
         :param entity_ebd:Tensor, size=(num_entity, input_dim)
         :param relation_ebd: Tensor, size=(num_relation, input_dim)
@@ -50,15 +51,18 @@ class ConvTransEBase(nn.Module):
                        relation_ebd.unsqueeze(dim=1)[query[:, 1]]],
                       dim=1)
         x = self.bn0(x)
-        x = self.dropout(x)
+        if training:
+            x = self.dropout(x)
         x.unsqueeze_(dim=1)
         x = self.conv(self.pad(x))
         x = self.bn1(x.squeeze())
         x = F.relu(x)
-        x = self.dropout(x)
+        if training:
+            x = self.dropout(x)
         x = self.flat(x)
         x = self.fc(x)
-        x = self.dropout(x)
+        if training:
+            x = self.dropout(x)
         x = self.bn2(x)
         x = F.relu(x)
         scores = torch.mm(x, entity_ebd.transpose(0, 1))

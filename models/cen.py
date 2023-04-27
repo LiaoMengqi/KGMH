@@ -80,7 +80,7 @@ class CEN(nn.Module):
         rank_list = []
         with torch.no_grad():
             for edge in tqdm(data):
-                score = self.model.forward(history, edge)
+                score = self.model.forward(history, edge, training=False)
                 ranks = mtc.calculate_rank(score.cpu().numpy(), edge[:, 2].cpu().numpy())
                 rank_list.append(ranks)
         all_ranks = np.concatenate(rank_list)

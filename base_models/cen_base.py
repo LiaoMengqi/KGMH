@@ -47,7 +47,8 @@ class CENBase(nn.Module):
 
     def forward(self,
                 history_graph: list,
-                target_graph):
+                target_graph,
+                training=True):
         length = len(history_graph)
         score = torch.zeros(len(target_graph), self.num_entity, device=target_graph.device)
         for i in range(self.seq_len):
@@ -56,9 +57,14 @@ class CENBase(nn.Module):
                 break
             x = self.encoder(history_graph[-(i + 1):],
                              entity_embed=self.entity_embed,
-                             relation_embed=self.relation_embed)
+                             relation_embed=self.relation_embed,
+                             training=training)
             # size=(num_query,dim*c)
-            x = self.decoder(x, self.relation_embed, target_graph[:, [0, 1]], i)
+            x = self.decoder(x,
+                             self.relation_embed,
+                             target_graph[:, [0, 1]],
+                             i,
+                             training=training)
             # size=(num_query,dim)
             x = self.fc(x)
             x = self.dropout(x)
@@ -102,11 +108,12 @@ class KGSEncoder(nn.Module):
     def forward(self,
                 edges: list,
                 entity_embed,
-                relation_embed):
+                relation_embed,
+                training=True):
         entity_embed = self.normalize(entity_embed)
         relation_embed = self.normalize(relation_embed)
         for edge in edges:
-            current_embed = self.rgcn.forward(entity_embed, relation_embed, edge)
+            current_embed = self.rgcn.forward(entity_embed, relation_embed, edge, training)
             current_embed = self.normalize(current_embed)
             time_weight = F.sigmoid(torch.mm(entity_embed, self.time_gate_weight) + self.time_gate_bias)
             entity_embed = time_weight * current_embed + (1 - time_weight) * entity_embed
@@ -144,16 +151,23 @@ class ERDecoder(nn.Module):
         self.flat = nn.Flatten()
         self.fc = nn.Linear(input_dim * num_channel, input_dim, bias=bias)
 
-    def forward(self, entity_ebd, relation_ebd, query, seq_len):
+    def forward(self,
+                entity_ebd,
+                relation_ebd,
+                query,
+                seq_len,
+                training=True):
         x = torch.cat([entity_ebd.unsqueeze(dim=1)[query[:, 0]],
                        relation_ebd.unsqueeze(dim=1)[query[:, 1]]],
                       dim=1)
         x = self.bn0_list[seq_len](x)
-        x = self.dropout(x)
+        if training:
+            x = self.dropout(x)
         x.unsqueeze_(dim=1)
         x = self.conv_list[seq_len](self.pad(x))
         x = self.bn1_list[seq_len](x.squeeze())
         x = F.relu(x)
-        x = self.dropout(x)
+        if training:
+            x = self.dropout(x)
         x = self.flat(x)
         return x

@@ -52,7 +52,8 @@ class RGCNBase(nn.Module):
 
     def forward(self,
                 edges: torch.Tensor,
-                h_input=None):
+                h_input=None,
+                training=True):
         # initial input representation
         if h_input is None:
             if not self.init_embed:

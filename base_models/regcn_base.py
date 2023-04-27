@@ -86,7 +86,8 @@ class REGCNBase(nn.Module):
         return F.normalize(tensor) if self.layer_norm else tensor
 
     def forward(self,
-                edges: list):
+                edges: list,
+                training=True):
         """
         get evolved relation embedding and entity embedding
         :param edges: a sequence of graph edges
@@ -113,7 +114,8 @@ class REGCNBase(nn.Module):
 
             current_entity_embed = self.rgcn.forward(evolved_entity_embed,
                                                      evolved_relation_embed,
-                                                     edge)
+                                                     edge,
+                                                     training=training)
             # normalize
             current_entity_embed = self.normalize(current_entity_embed)
             # update evolved entity embedding
@@ -142,8 +144,12 @@ class URGCNBase(nn.Module):
                                           self_loop=self_loop,
                                           ))
 
-    def forward(self, input_h, relation_embed, edges):
+    def forward(self,
+                input_h,
+                relation_embed,
+                edges,
+                training=True):
         h = input_h
         for i in range(self.num_layer):
-            h = self.layers[i](h, relation_embed, edges)
+            h = self.layers[i](h, relation_embed, edges, training)
         return h

@@ -84,9 +84,9 @@ class REGCN(nn.Module):
                                                self.data.num_relation)
         rank_list = []
         with torch.no_grad():
-            evolved_entity_embed, evolved_relation_embed = self.model.forward(history)
+            evolved_entity_embed, evolved_relation_embed = self.model.forward(history, training=False)
             for edge in tqdm(data):
-                score = self.decoder(evolved_entity_embed, evolved_relation_embed, edge[:, [0, 1]])
+                score = self.decoder(evolved_entity_embed, evolved_relation_embed, edge[:, [0, 1]], training=False)
                 ranks = mtc.calculate_rank(score.cpu().numpy(), edge[:, 2].cpu().numpy())
                 rank_list.append(ranks)
         all_ranks = np.concatenate(rank_list)

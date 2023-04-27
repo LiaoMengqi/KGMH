@@ -1,6 +1,6 @@
 import argparse
-from models.__list__ import *
-from base_models.__list__ import *
+from models.__conf__ import *
+from base_models.__conf__ import *
 import torch
 from utils.io_func import save_checkpoint
 from utils.io_func import load_checkpoint
