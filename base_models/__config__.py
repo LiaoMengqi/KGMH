@@ -39,7 +39,7 @@ def get_default_base_model(model: str,
             hidden_dim=50,
             seq_len=3,
             num_layer=2,
-            dropout=0.4,
+            dropout=0.2,
             active=True,
             self_loop=True,
             layer_norm=True)

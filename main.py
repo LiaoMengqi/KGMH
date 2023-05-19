@@ -1,6 +1,6 @@
 import argparse
-from models.__conf__ import *
-from base_models.__conf__ import *
+from models.__config__ import *
+from base_models.__config__ import *
 import torch
 from utils.io_func import save_checkpoint
 from utils.io_func import load_checkpoint
@@ -29,9 +29,10 @@ def get_opt(args,
     return opt
 
 
-def train(model, epochs, batch_size, step):
+def train(model, epochs, batch_size, step, early_stop):
     """
     train model
+    :param early_stop:
     :param model: model
     :param epochs: train epoch
     :param batch_size: batch size
@@ -43,6 +44,8 @@ def train(model, epochs, batch_size, step):
     loss_history = []
     train_time = []
     evaluate_time = []
+    decline = 0
+    best = 0
     for epoch in range(epochs):
         time_start = time.time()
         loss = model.train_epoch(batch_size=batch_size)
@@ -70,6 +73,21 @@ def train(model, epochs, batch_size, step):
                     metric_history[key].append(metrics[key])
                 else:
                     metric_history[key].append(metrics[key])
+            if early_stop > 0 and epoch > 0:
+                if metric_history['mrr'][-1] < metric_history['mrr'][-2]:
+                    decline = decline + 1
+                if decline >= early_stop:
+                    break
+            if metrics['mrr'] > metric_history['mrr'][best]:
+                best = epoch
+    print("\n**********************************finish**********************************\n")
+    print("best : hits@1: %f |hits@3: %f |hits@10: %f |hits@100: %f |mr: %f |mrr: %f" %
+          (metric_history['hits@1'][best],
+           metric_history['hits@3'][best],
+           metric_history['hits@10'][best],
+           metric_history['hits@100'][best],
+           metric_history['mr'][best],
+           metric_history['mrr'][best],))
 
     # plot
     hist_value({'hits@1': metric_history['hits@1'],
@@ -145,7 +163,7 @@ def main(args):
         evaluate(model, args.batch_size)
     else:
         # train
-        train(model, args.epoch, args.batch_size, args.eva_step)
+        train(model, args.epoch, args.batch_size, args.eva_step, args.early_stop)
 
 
 if __name__ == '__main__':
@@ -180,6 +198,8 @@ if __name__ == '__main__':
     parser.add_argument("--batch-size", type=int, default=1024,
                         help="learning rate")
     parser.add_argument("--eva-step", type=int, default=1,
+                        help="learning rate")
+    parser.add_argument("--early-stop", type=int, default=0,
                         help="learning rate")
     # test
     parser.add_argument("--test", action='store_true', default=False,
