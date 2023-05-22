@@ -23,7 +23,7 @@ We can use the following command to quickly train an extrapolation model.
 
 ```sh
 # CyGNet
-python main.py --dataset ICEWS14s --model cygnet --epoch 5 --amsgrad --lr 0.001 --early-stop 3
+python main.py --dataset ICEWS14s --model cygnet --epoch 3 --amsgrad --lr 0.001 --early-stop 3
 # RE-GCN
 python main.py --dataset ICEWS14s --model regcn  --epoch 50 --lr 0.001 --weight-decay 1e-5 --early-stop 3
 # CEN
