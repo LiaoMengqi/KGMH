@@ -161,7 +161,7 @@ def main(args):
     if args.test:
         # evaluate
         if args.checkpoint is None:
-            raise Exception("No checkpoint was loaded!")
+            raise Exception("Please choose a checkpoint to load!")
         evaluate(model, args.batch_size)
     else:
         # train
