@@ -18,18 +18,39 @@ This module contains some base models which only have initial function and forwa
 This module contains complete models which integrate training, prediction, and loss calculations
 
 # 2 Quick start
-
+## 2.1 Train model
 We can use the following command to quickly train an extrapolation model.
-
 ```sh
 # CyGNet
-python main.py --dataset ICEWS14s --model cygnet --epoch 3 --amsgrad --lr 0.001 --early-stop 3
+python main.py \
+  --dataset ICEWS14s \
+  --model cygnet \
+  --epoch 3 --amsgrad \
+  --lr 0.001 \
+  --early-stop 3
 # RE-GCN
-python main.py --dataset ICEWS14s --model regcn  --epoch 50 --lr 0.001 --weight-decay 1e-5 --early-stop 3
+python main.py \
+  --dataset ICEWS14s \
+  --model regcn  \
+  --epoch 50 \
+  --lr 0.001 \
+  --weight-decay 1e-5 \
+  --early-stop 3
 # CEN
-python main.py --dataset ICEWS14s --model cen  --epoch 50 --lr 0.001 --weight-decay 1e-5 --early-stop 3
+python main.py \
+  --dataset ICEWS14s \
+  --model cen  \
+  --epoch 50 \
+  --lr 0.001 \
+  --weight-decay 1e-5 \
+  --early-stop 3
 ```
-We can use the following command to load a model and evaluate it on test dataset.
+## 2.2 Evaluate model
+We can use the following command to load a checkpoint and evaluate it on test dataset.
 ```sh
-python main.py --dataset ICEWS14s --model cygnet --test --checkpoint cygnet_ICEWS14s_alpha5e-1_dim50_penalty-100
+python main.py \
+  --dataset ICEWS14s \
+  --model cygnet \
+  --test \
+  --checkpoint cygnet_ICEWS14s_alpha5e-1_dim50_penalty-100
 ```

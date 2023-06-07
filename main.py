@@ -161,7 +161,7 @@ def main(args):
     if args.test:
         # evaluate
         if args.checkpoint is None:
-            raise Exception("Please choose a checkpoint to load!")
+            raise Exception("You need to load a checkpoint for testing!")
         evaluate(model, args.batch_size)
     else:
         # train
@@ -188,9 +188,9 @@ if __name__ == '__main__':
     parser.add_argument("--momentum", type=float, default=0.0,
                         help="momentum")
     parser.add_argument("--lr", type=float, default=1e-3,
-                        help="learning rate")
+                        help="optimizer parameter")
     parser.add_argument("--eps", type=float, default=1e-8,
-                        help="learning rate")
+                        help="optimizer parameter")
     parser.add_argument("--amsgrad", action='store_true', default=False,
                         help="Adam optimizer parameter")
 
@@ -198,17 +198,17 @@ if __name__ == '__main__':
     parser.add_argument("--epoch", type=int, default=15,
                         help="learning rate")
     parser.add_argument("--batch-size", type=int, default=1024,
-                        help="learning rate")
+                        help="batch size.")
     parser.add_argument("--eva-step", type=int, default=1,
-                        help="learning rate")
+                        help="evaluate model on valid set after 'eva-step' step of training.")
     parser.add_argument("--early-stop", type=int, default=0,
-                        help="learning rate")
+                        help="patience for early stop.")
     # test
     parser.add_argument("--test", action='store_true', default=False,
-                        help="load stat from dir and directly test")
+                        help="evaluate model on test set, and notice that you must load a checkpoint for this.")
     # other
     parser.add_argument("--gpu", action='store_true', default=True,
-                        help="use GPU")
+                        help="use GPU.")
     args_parsed = parser.parse_args()
 
     main(args_parsed)
