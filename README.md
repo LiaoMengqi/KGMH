@@ -1,5 +1,6 @@
 # KGTL
 
+[中文](README_zh.md)
 # 1 introduce
 
 Knowledge Graph Tools Lib (KGTL) contains four modules, which are data , utils, base_models and models.
@@ -27,7 +28,7 @@ python main.py \
   --model cygnet \
   --epoch 3 --amsgrad \
   --lr 0.001 \
-  --early-stop 3
+  --early-stop 50
 # RE-GCN
 python main.py \
   --dataset ICEWS14s \
