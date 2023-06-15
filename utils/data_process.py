@@ -73,3 +73,21 @@ def add_reverse_relation(edges: list,
                             dim=1)
         res.append(torch.cat([edge, reverse], dim=0))
     return res
+
+
+def get_answer(data, num_entity, num_relation):
+    i = data[:, 0] * num_relation + data[:, 1]
+    i = torch.cat([i.unsqueeze(0), data[:, 2].unsqueeze(0)], dim=0)
+    v = torch.ones(i.shape[-1])
+    ans = torch.sparse_coo_tensor(i, v, size=(num_entity * num_relation, num_entity), device=data.device)
+    return ans
+
+
+def filter_score(score: torch.Tensor,
+                 ans: torch.Tensor,
+                 data: torch.Tensor,
+                 num_relation):
+    i = data[:, 0] * num_relation + data[:, 1]
+    ans = torch.index_select(ans, dim=0, index=i).to_dense()
+    ans[range(len(ans)), data[:, 2]] = 0
+    return score + ans * -10000

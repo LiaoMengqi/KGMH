@@ -59,20 +59,15 @@ def train(model, epochs, batch_size, step, early_stop):
             metrics = model.test(batch_size=batch_size)
             time_end = time.time()
             evaluate_time.append(time_end - time_start)
-            print('hits@1: %f |hits@3: %f |hits@10: %f |hits@100: %f |mr: %f |mrr: %f |time: %f' %
-                  (metrics['hits@1'],
-                   metrics['hits@3'],
-                   metrics['hits@10'],
-                   metrics['hits@100'],
-                   metrics['mr'],
-                   metrics['mrr'],
-                   time_end - time_start))
+
             for key in metrics.keys():
+                print(key, ': ', metrics[key], ' |', end='')
                 if key not in metric_history.keys():
                     metric_history[key] = []
                     metric_history[key].append(metrics[key])
                 else:
                     metric_history[key].append(metrics[key])
+            print('time: %f' % (time_end - time_start))
             if early_stop > 0 and epoch > 0:
                 if metric_history['mrr'][-1] < metric_history['mrr'][-2]:
                     decline = decline + 1
@@ -180,6 +175,8 @@ if __name__ == '__main__':
     # dataset
     parser.add_argument("--dataset", type=str, required=True,
                         help="choose dataset")
+    parser.add_argument("--filter", action='store_true', default=False,
+                        help="filter triplets. when a query (s,r,?) has multiple objects, filter out others.")
     # Optimizer
     parser.add_argument("--opt", type=str, default='adam',
                         help="optimizer")

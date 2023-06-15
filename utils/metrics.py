@@ -22,16 +22,20 @@ def calculate_mr(ranks: np.ndarray):
 
 
 def ranks_to_metrics(metric_list: list,
-                     ranks):
+                     ranks,
+                     filter=False):
     metrics = {}
+    prefix = ""
+    if filter:
+        prefix = "filter "
     for metric in metric_list:
         if re.match(r'hits@\d+', metric):
             n = int(re.findall(r'\d+', metric)[0])
-            metrics[metric] = calculate_hist(n, ranks)
+            metrics[prefix + metric] = calculate_hist(n, ranks)
         elif metric == 'mr':
-            metrics['mr'] = calculate_mr(ranks)
+            metrics[prefix + 'mr'] = calculate_mr(ranks)
         elif metric == 'mrr':
-            metrics['mrr'] = calculate_mrr(ranks)
+            metrics[prefix + 'mrr'] = calculate_mrr(ranks)
     return metrics
 
 

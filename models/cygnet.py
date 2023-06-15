@@ -1,3 +1,4 @@
+import utils.data_process
 from base_models.cygnet_base import CyGNetBase
 from data.data_loader import DataLoader
 import torch.nn as nn
@@ -71,6 +72,7 @@ class CyGNet(nn.Module):
     def test(self,
              batch_size=512,
              dataset='valid',
+             filter=True,
              metric_list=None):
         if metric_list is None:
             metric_list = ['hits@1', 'hits@3', 'hits@10', 'hits@100', 'mr', 'mrr']
@@ -83,16 +85,28 @@ class CyGNet(nn.Module):
         else:
             raise Exception('dataset ' + dataset + ' is not defined!')
         rank_list = []
+        rank_list_filter = []
         for i in tqdm(range(len(data))):
             batches = dps.batch_data(data[i], batch_size=batch_size)
+            ans = None
+            if filter:
+                ans = utils.data_process.get_answer(data[i], self.data.num_entity, self.data.num_relation)
             time_stamp = time_list[i]
             for batch in batches:
                 with torch.no_grad():
                     score = self.model.forward(batch, self.get_vocabulary(batch[:, 0], batch[:, 1]), time_stamp)
                     rank = mtc.calculate_rank(score.cpu().numpy(), batch[:, 2].cpu().numpy())
                     rank_list.append(rank)
+                    if filter:
+                        score = utils.data_process.filter_score(score, ans, batch, self.data.num_relation)
+                        rank = mtc.calculate_rank(score.cpu().numpy(), batch[:, 2].cpu().numpy())
+                        rank_list_filter.append(rank)
         all_rank = np.concatenate(rank_list)
         metrics = mtc.ranks_to_metrics(metric_list, all_rank)
+        if filter:
+            all_rank = np.concatenate(rank_list_filter)
+            metrics_filter = mtc.ranks_to_metrics(metric_list, all_rank, filter)
+            metrics.update(metrics_filter)
         return metrics
 
     def get_name(self):
