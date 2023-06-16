@@ -47,8 +47,8 @@ def get_default_base_model(model: str,
         base_model = CyGNetBase(
             num_entity=data.num_entity,
             num_relation=data.num_relation,
-            h_dim=50,
-            alpha=0.5,
+            h_dim=200,
+            alpha=0.8,
             penalty=-100
         )
     elif model == 'cen':
