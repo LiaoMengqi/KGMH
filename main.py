@@ -46,6 +46,7 @@ def train(model, epochs, batch_size, step, early_stop):
     evaluate_time = []
     decline = 0
     best = 0
+    tolerance = early_stop
     for epoch in range(epochs):
         time_start = time.time()
         loss = model.train_epoch(batch_size=batch_size)
@@ -53,7 +54,6 @@ def train(model, epochs, batch_size, step, early_stop):
         train_time.append(time_end - time_start)
         loss_history.append(loss)
         print('epoch: %d |loss: %f |time: %fs' % (epoch + 1, loss, time_end - time_start))
-
         if (epoch + 1) % step == 0:
             time_start = time.time()
             metrics = model.test(batch_size=batch_size)
@@ -68,13 +68,19 @@ def train(model, epochs, batch_size, step, early_stop):
                 else:
                     metric_history[key].append(metrics[key])
             print('time: %f' % (time_end - time_start))
-            if early_stop > 0 and epoch > 0:
-                if metric_history['mrr'][-1] < metric_history['mrr'][-2]:
-                    decline = decline + 1
-                if decline >= early_stop:
-                    break
-            if metrics['mrr'] > metric_history['mrr'][best]:
-                best = epoch
+            if metric_history['mrr'][-1] < metric_history['mrr'][best]:
+                # performance decline
+                if early_stop > 0:
+                    tolerance -= 1
+                    if tolerance <= 0:
+                        break
+            else:
+                # achieve better performance, save model
+                save_checkpoint(model, name=name)
+                # reset tolerance
+                tolerance = early_stop
+                best = (epoch // step)
+
     print("\n**********************************finish**********************************\n")
     print("best : hits@1: %f |hits@3: %f |hits@10: %f |hits@100: %f |mr: %f |mrr: %f" %
           (metric_history['hits@1'][best],
@@ -100,8 +106,6 @@ def train(model, epochs, batch_size, step, early_stop):
     hist_value({'loss': loss_history},
                value='loss',
                name=name + '_valid_loss')
-    # save model
-    save_checkpoint(model, name=name)
     # save train history
     data_to_save = metric_history
     data_to_save['loss'] = loss_history
@@ -120,12 +124,8 @@ def evaluate(model, batch_size, data='test'):
     """
     name = model.get_name()
     metrics = model.test(batch_size=batch_size, dataset='test')
-    print('hits@1 %f |hits@3 %f |hits@10 %f |hits@100 %f |mr %f |mrr %f' % (metrics['hits@1'],
-                                                                            metrics['hits@3'],
-                                                                            metrics['hits@10'],
-                                                                            metrics['hits@100'],
-                                                                            metrics['mr'],
-                                                                            metrics['mrr']))
+    for key in metrics.keys():
+        print(key, ': ', metrics[key], ' |', end='')
     to_json(metrics, name=name + '_test_result')
 
 
