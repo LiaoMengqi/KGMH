@@ -7,6 +7,7 @@ from base_models.cen_base import CENBase
 from data.data_loader import DataLoader
 import utils.data_process as dps
 import utils.metrics as mtc
+import utils
 
 
 class CEN(nn.Module):
@@ -59,7 +60,8 @@ class CEN(nn.Module):
     def test(self,
              batch_size=128,
              dataset='valid',
-             metric_list=None):
+             metric_list=None,
+             filter_out=False):
         if metric_list is None:
             metric_list = ['hits@1', 'hits@3', 'hits@10', 'hits@100', 'mr', 'mrr']
         if dataset == 'valid':
@@ -78,13 +80,23 @@ class CEN(nn.Module):
             history = dps.add_reverse_relation(history,
                                                self.data.num_relation)
         rank_list = []
+        rank_list_filter = []
         with torch.no_grad():
             for edge in tqdm(data):
                 score = self.model.forward(history, edge, training=False)
                 ranks = mtc.calculate_rank(score.cpu().numpy(), edge[:, 2].cpu().numpy())
                 rank_list.append(ranks)
+                if filter_out:
+                    ans = utils.data_process.get_answer(edge, self.data.num_entity, self.data.num_relation * 2)
+                    score = utils.data_process.filter_score(score, ans, edge, self.data.num_relation * 2)
+                    rank = mtc.calculate_rank(score.cpu().numpy(), edge[:, 2].cpu().numpy())
+                    rank_list_filter.append(rank)
         all_ranks = np.concatenate(rank_list)
         metrics = mtc.ranks_to_metrics(metric_list=metric_list, ranks=all_ranks)
+        if filter_out:
+            all_rank = np.concatenate(rank_list_filter)
+            metrics_filter = mtc.ranks_to_metrics(metric_list, all_rank, filter_out)
+            metrics.update(metrics_filter)
         return metrics
 
     def get_name(self):

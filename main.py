@@ -29,7 +29,7 @@ def get_opt(args,
     return opt
 
 
-def train(model, epochs, batch_size, step, early_stop):
+def train(model, epochs, batch_size, step, early_stop, filter_out=False):
     """
     train model
     :param early_stop:
@@ -37,6 +37,7 @@ def train(model, epochs, batch_size, step, early_stop):
     :param epochs: train epoch
     :param batch_size: batch size
     :param step: step to evaluate model on valid set
+    :param filter:
     :return: None
     """
     name = model.get_name()
@@ -56,7 +57,7 @@ def train(model, epochs, batch_size, step, early_stop):
         print('epoch: %d |loss: %f |time: %fs' % (epoch + 1, loss, time_end - time_start))
         if (epoch + 1) % step == 0:
             time_start = time.time()
-            metrics = model.test(batch_size=batch_size)
+            metrics = model.test(batch_size=batch_size, filter_out=filter_out)
             time_end = time.time()
             evaluate_time.append(time_end - time_start)
 
@@ -114,16 +115,17 @@ def train(model, epochs, batch_size, step, early_stop):
     to_json(data_to_save, name=name)
 
 
-def evaluate(model, batch_size, data='test'):
+def evaluate(model, batch_size, data='test', filter_out=False):
     """
     evaluate model in test set or valid set
     :param model: model
     :param batch_size: batch size
     :param data: dataset
+    :param filter:
     :return: None
     """
     name = model.get_name()
-    metrics = model.test(batch_size=batch_size, dataset='test')
+    metrics = model.test(batch_size=batch_size, dataset='test', filter_out=filter_out)
     for key in metrics.keys():
         print(key, ': ', metrics[key], ' |', end='')
     to_json(metrics, name=name + '_test_result')
@@ -157,10 +159,10 @@ def main(args):
         # evaluate
         if args.checkpoint is None:
             raise Exception("You need to load a checkpoint for testing!")
-        evaluate(model, args.batch_size)
+        evaluate(model, args.batch_size,filter=args.filter)
     else:
         # train
-        train(model, args.epoch, args.batch_size, args.eva_step, args.early_stop)
+        train(model, args.epoch, args.batch_size, args.eva_step, args.early_stop, filter_out=args.filter)
 
 
 if __name__ == '__main__':

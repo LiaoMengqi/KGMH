@@ -23,10 +23,10 @@ def calculate_mr(ranks: np.ndarray):
 
 def ranks_to_metrics(metric_list: list,
                      ranks,
-                     filter=False):
+                     filter_out=False):
     metrics = {}
     prefix = ""
-    if filter:
+    if filter_out:
         prefix = "filter "
     for metric in metric_list:
         if re.match(r'hits@\d+', metric):

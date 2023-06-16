@@ -8,6 +8,7 @@ import utils.data_process as dps
 from tqdm import tqdm
 import utils.metrics as mtc
 import numpy as np
+import utils
 
 
 class REGCN(nn.Module):
@@ -64,6 +65,7 @@ class REGCN(nn.Module):
     def test(self,
              batch_size=512,
              dataset='valid',
+             filter_out=False,
              metric_list=None):
         if metric_list is None:
             metric_list = ['hits@1', 'hits@3', 'hits@10', 'hits@100', 'mr', 'mrr']
@@ -83,14 +85,24 @@ class REGCN(nn.Module):
             history = dps.add_reverse_relation(history,
                                                self.data.num_relation)
         rank_list = []
+        rank_list_filter = []
         with torch.no_grad():
             evolved_entity_embed, evolved_relation_embed = self.model.forward(history, training=False)
             for edge in tqdm(data):
                 score = self.decoder(evolved_entity_embed, evolved_relation_embed, edge[:, [0, 1]], training=False)
                 ranks = mtc.calculate_rank(score.cpu().numpy(), edge[:, 2].cpu().numpy())
                 rank_list.append(ranks)
+                if filter_out:
+                    ans = utils.data_process.get_answer(edge, self.data.num_entity, self.data.num_relation * 2)
+                    score = utils.data_process.filter_score(score, ans, edge, self.data.num_relation*2)
+                    rank = mtc.calculate_rank(score.cpu().numpy(), edge[:, 2].cpu().numpy())
+                    rank_list_filter.append(rank)
         all_ranks = np.concatenate(rank_list)
         metrics = mtc.ranks_to_metrics(metric_list=metric_list, ranks=all_ranks)
+        if filter_out:
+            all_rank = np.concatenate(rank_list_filter)
+            metrics_filter = mtc.ranks_to_metrics(metric_list, all_rank, filter_out)
+            metrics.update(metrics_filter)
         return metrics
 
     def loss(self, score, target):
