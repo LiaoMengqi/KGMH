@@ -1,6 +1,7 @@
 import torch
 
 
+
 def reverse_dict(dict_t: dict):
     new_dict = {}
     for key in dict_t.keys():
@@ -13,15 +14,10 @@ def split_data_by_time(data: torch.Tensor,
     data_split = []
     time_index = {}
     time_list = []
-    for line in data:
-        if int(line[3]) in time_list:
-            data_split[time_index[int(line[3])]].append(line[0:3].unsqueeze(0))
-        else:
-            time_index[int(line[3])] = len(data_split)
-            time_list.append(int(line[3]))
-            data_split.append([line[0:3].unsqueeze(0)])
-    for i in range(len(data_split)):
-        data_split[i] = torch.cat(data_split[i], dim=0)
+    times, _ = torch.unique(data[:, 3]).sort()
+    for i in times:
+        time_index[i.item()] = len(data_split)
+        data_split.append(data[data[:, 3] == i][:, 0:3])
     return data_split, time_index, time_list
 
 
