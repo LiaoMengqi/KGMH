@@ -56,7 +56,7 @@ class DataLoader(object):
             self.train.cpu()
             self.valid.cpu()
             self.test.cpu()
-        elif device == 'cuda':
-            self.train = self.train.cuda()
-            self.valid = self.valid.cuda()
-            self.test = self.test.cuda()
+        else :
+            self.train = self.train.to(device)
+            self.valid = self.valid.to(device)
+            self.test = self.test.to(device)

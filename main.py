@@ -133,8 +133,11 @@ def evaluate(model, batch_size, data='test', filter_out=False):
 
 def main(args):
     # choose device
-    if args.gpu:
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    if args.gpu != -1:
+        if not torch.cuda.is_available() or args.gpu >= torch.cuda.device_count():
+            device = 'cpu'
+        else:
+            device = 'cuda:%d' % args.gpu
     else:
         device = 'cpu'
     # load data
@@ -159,7 +162,7 @@ def main(args):
         # evaluate
         if args.checkpoint is None:
             raise Exception("You need to load a checkpoint for testing!")
-        evaluate(model, args.batch_size,filter=args.filter)
+        evaluate(model, args.batch_size, filter=args.filter)
     else:
         # train
         train(model, args.epoch, args.batch_size, args.eva_step, args.early_stop, filter_out=args.filter)
@@ -206,7 +209,7 @@ if __name__ == '__main__':
     parser.add_argument("--test", action='store_true', default=False,
                         help="evaluate model on test set, and notice that you must load a checkpoint for this.")
     # other
-    parser.add_argument("--gpu", action='store_true', default=True,
+    parser.add_argument("--gpu", type=int, default=-1,
                         help="use GPU.")
     args_parsed = parser.parse_args()
 
