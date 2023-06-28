@@ -13,12 +13,11 @@ def split_data_by_time(data: torch.Tensor,
                        start=0):
     data_split = []
     time_index = {}
-    time_list = []
     times, _ = torch.unique(data[:, 3]).sort()
     for i in times:
         time_index[i.item()] = len(data_split)
         data_split.append(data[data[:, 3] == i][:, 0:3])
-    return data_split, time_index, time_list
+    return data_split, time_index, times
 
 
 def generate_negative_sample(data: torch.Tensor,
