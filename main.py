@@ -5,7 +5,7 @@ import torch
 from utils.io_func import save_checkpoint
 from utils.io_func import load_checkpoint
 from utils.io_func import to_json
-from utils.plot import hist_value
+
 import time
 
 opt_list = {
@@ -29,7 +29,7 @@ def get_opt(args,
     return opt
 
 
-def train(model, epochs, batch_size, step, early_stop, filter_out=False):
+def train(model, epochs, batch_size, step, early_stop, filter_out=False, plot=False):
     """
     train model
     :param early_stop:
@@ -90,23 +90,24 @@ def train(model, epochs, batch_size, step, early_stop, filter_out=False):
            metric_history['hits@100'][best],
            metric_history['mr'][best],
            metric_history['mrr'][best],))
-
-    # plot
-    hist_value({'hits@1': metric_history['hits@1'],
-                'hits@3': metric_history['hits@3'],
-                'hits@10': metric_history['hits@10'],
-                'hits@100': metric_history['hits@100']},
-               value='hits@k',
-               name=name + '_valid_hits@k')
-    hist_value({'mr': metric_history['mr']},
-               value='mr',
-               name=name + '_valid_mr')
-    hist_value({'mrr': metric_history['mrr']},
-               value='mrr',
-               name=name + '_valid_mrr')
-    hist_value({'loss': loss_history},
-               value='loss',
-               name=name + '_valid_loss')
+    if plot:
+        # plot loss and metrics
+        from utils.plot import hist_value
+        hist_value({'hits@1': metric_history['hits@1'],
+                    'hits@3': metric_history['hits@3'],
+                    'hits@10': metric_history['hits@10'],
+                    'hits@100': metric_history['hits@100']},
+                   value='hits@k',
+                   name=name + '_valid_hits@k')
+        hist_value({'mr': metric_history['mr']},
+                   value='mr',
+                   name=name + '_valid_mr')
+        hist_value({'mrr': metric_history['mrr']},
+                   value='mrr',
+                   name=name + '_valid_mrr')
+        hist_value({'loss': loss_history},
+                   value='loss',
+                   name=name + '_valid_loss')
     # save train history
     data_to_save = metric_history
     data_to_save['loss'] = loss_history
@@ -118,6 +119,7 @@ def train(model, epochs, batch_size, step, early_stop, filter_out=False):
 def evaluate(model, batch_size, data='test', filter_out=False):
     """
     evaluate model in test set or valid set
+    :param filter_out:
     :param model: model
     :param batch_size: batch size
     :param data: dataset
@@ -125,7 +127,7 @@ def evaluate(model, batch_size, data='test', filter_out=False):
     :return: None
     """
     name = model.get_name()
-    metrics = model.test(batch_size=batch_size, dataset='test', filter_out=filter_out)
+    metrics = model.test(batch_size=batch_size, dataset=data, filter_out=filter_out)
     for key in metrics.keys():
         print(key, ': ', metrics[key], ' |', end='')
     to_json(metrics, name=name + '_test_result')
@@ -162,10 +164,11 @@ def main(args):
         # evaluate
         if args.checkpoint is None:
             raise Exception("You need to load a checkpoint for testing!")
-        evaluate(model, args.batch_size, filter=args.filter)
+        evaluate(model, args.batch_size, filter_out=args.filter)
     else:
         # train
-        train(model, args.epoch, args.batch_size, args.eva_step, args.early_stop, filter_out=args.filter)
+        train(model, args.epoch, args.batch_size, args.eva_step, args.early_stop, filter_out=args.filter,
+              plot=args.plot)
 
 
 if __name__ == '__main__':
@@ -205,6 +208,8 @@ if __name__ == '__main__':
                         help="evaluate model on valid set after 'eva-step' step of training.")
     parser.add_argument("--early-stop", type=int, default=0,
                         help="patience for early stop.")
+    parser.add_argument("--plot", action='store_true', default=False,
+                        help="plot loss and metrics.")
     # test
     parser.add_argument("--test", action='store_true', default=False,
                         help="evaluate model on test set, and notice that you must load a checkpoint for this.")
