@@ -1,34 +1,26 @@
 # KGTL
+# 更新日志
 
-[中文](README_zh.md)
-# 1 introduce
+- 2023.06.25,支持gpu选择,例如调用main.py脚本时指定0号gpu`--gpu 0`,修改数据按时间划分的函数,提升数据处理速度
+- 2023.06.15,加入过滤功能,外推模型都支持过滤,调用main.py时添加`--filter`参数来进行过滤
 
-Knowledge Graph Tools Lib (KGTL) contains four modules, which are data , utils, base_models and models.
+# 1 简介
+知识图谱工具库包含四个模块——数据模块、工具模块、模型基类模块和模型模块。数据模块包含数据加载类和数据集，工具模块包含一些辅助函数，模型基类模块包含各个模型的基类，基类仅包含初始化和前向传播的过程，训练和评估都集成在模型模块的模型类中。
 
-## 1.1 data
+此外方法库还包含一个可执行main.py脚本，提供了模型训练、评估、保存checkpoint、根据实验数据绘图等功能。
 
-Firstly, data module is mainly used for data loading.
+# 2 快速开始
 
-## 1.2 utils 
-Utils module contains functions for data processing, file reading and writing, indicator calculation and data plotting.
-
-## 1.3 base_models
-This module contains some base models which only have initial function and forward function.
-
-## 1.4 models 
-This module contains complete models which integrate training, prediction, and loss calculations
-
-# 2 Quick start
-## 2.1 Train model
-We can use the following command to quickly train an extrapolation model.
-```sh
+执行以下命令快速训练模型
+```
 # CyGNet
 python main.py \
   --dataset ICEWS14s \
   --model cygnet \
-  --epoch 3 --amsgrad \
+  --epoch 50 \
+  --amsgrad \
   --lr 0.001 \
-  --early-stop 50
+  --early-stop 3
 # RE-GCN
 python main.py \
   --dataset ICEWS14s \
@@ -46,8 +38,7 @@ python main.py \
   --weight-decay 1e-5 \
   --early-stop 3
 ```
-## 2.2 Evaluate model
-We can use the following command to load a checkpoint and evaluate it on test dataset.
+执行以下脚本加载checkpoint在测试集上进行评估
 ```sh
 python main.py \
   --dataset ICEWS14s \
