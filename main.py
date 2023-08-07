@@ -157,6 +157,7 @@ def main(args):
     # model
     model = model_list[args.model](base_model, data, opt)
     model.to(device)
+
     # load checkpoint
     if args.checkpoint is not None:
         load_checkpoint(model, name=args.checkpoint)
@@ -198,6 +199,8 @@ if __name__ == '__main__':
                         help="optimizer parameter")
     parser.add_argument("--amsgrad", action='store_true', default=False,
                         help="Adam optimizer parameter")
+    parser.add_argument("--grad-norm", type=float, default=1.0,
+                        help="norm to clip gradient to")
 
     # train
     parser.add_argument("--epoch", type=int, default=15,

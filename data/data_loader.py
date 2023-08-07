@@ -24,6 +24,7 @@ class DataLoader(object):
         self.relation2id = {}
         self.num_relation = 0
         self.num_entity = 0
+        self.device = 'cpu'
 
     def load(self,
              load_time=False,
@@ -56,7 +57,8 @@ class DataLoader(object):
             self.train.cpu()
             self.valid.cpu()
             self.test.cpu()
-        else :
+        else:
             self.train = self.train.to(device)
             self.valid = self.valid.to(device)
             self.test = self.test.to(device)
+        self.device = device
