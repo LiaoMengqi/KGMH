@@ -70,7 +70,8 @@ def get_default_base_model(model: str,
             dim=50,
             drop_prop=0.5,
             lambdax=1.0,
-            alpha=0.1
+            alpha=0.1,
+            mode='soft'
         )
     else:
         raise Exception('model ' + model + ' not exist!')

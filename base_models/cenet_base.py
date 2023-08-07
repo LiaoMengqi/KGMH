@@ -19,6 +19,8 @@ class CeNetBase(nn.Module):
         self.dropout = nn.Dropout(p=drop_prop)
         self.lambdax = lambdax
         self.alpha = alpha
+        if mode not in ['solid','soft']:
+            raise Exception('mode don\'t exist!')
         self.mode=mode
 
         self.rel_embeds = nn.Parameter(torch.zeros(2 * num_relation, dim))

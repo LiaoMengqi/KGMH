@@ -106,9 +106,9 @@ class CeNet(nn.Module):
         return torch.mean(l_sup)
 
     def his_loss(self,
-             h_his,
-             h_nhis,
-             obj):
+                 h_his,
+                 h_nhis,
+                 obj):
         l_ce = -torch.sum(
             torch.gather(torch.log_softmax(h_his, dim=1) + torch.log_softmax(h_nhis, dim=1), 1, obj.view(-1, 1)))
         return l_ce / h_his.shape[0]
@@ -163,6 +163,8 @@ class CeNet(nn.Module):
                     entity_with_his = b_history.clone()
                     entity_with_his[entity_with_his > 0] = 1.0
                     mask = (entity_with_his == pred_c).float()
+                    if self.model.mode == 'soft':
+                        mask = torch.softmax(mask, dim=1)
                     score = pred_p * mask
                     ranks = mtc.calculate_rank(score.cpu().numpy(), batch[:, 2].cpu().numpy())
                     rank_list.append(ranks)
