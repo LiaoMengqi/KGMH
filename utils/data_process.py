@@ -1,5 +1,5 @@
 import torch
-
+import random
 
 
 def reverse_dict(dict_t: dict):
@@ -36,16 +36,22 @@ def generate_negative_sample(data: torch.Tensor,
 
 
 def batch_data(data: torch.Tensor,
-               batch_size):
-    data_shuffled = data[torch.randperm(data.shape[0])]
-    batch_num = int(data.shape[0] / batch_size) + int(data.shape[0] % batch_size != 0)
-    res = []
-    for i in range(batch_num):
-        if i * batch_size + batch_size < data.shape[0]:
-            res.append(data_shuffled[i * batch_size:i * batch_size + batch_size])
+               batch_size=256,
+               shuffle=True,
+               label=None):
+    size = len(data)
+    num_batch = int(size / batch_size) + int(size % batch_size != 0)
+    index = list(range(size))
+    random.shuffle(index)
+    for i in range(num_batch):
+        if batch_size * i + batch_size <= size:
+            b_index = index[batch_size * i:batch_size * i + batch_size]
         else:
-            res.append(data_shuffled[i * batch_size:data.shape[0]])
-    return res
+            b_index = index[batch_size * i:size]
+        if label is None:
+            yield data[b_index]
+        else:
+            yield data[b_index], label[b_index]
 
 
 def float_to_int_exp(num) -> str:
