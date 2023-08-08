@@ -38,7 +38,7 @@ python main.py --dataset ICEWS14s --model cenet --epoch 100 --amsgrad --lr 0.001
 加载保存的模型继续训练
 ```sh
 # 指定 checkpoint id
-python main.py --model cygnet --checkpoint 20230808085552
+python main.py --model cygnet --epoch 10 --checkpoint 20230808085552
 ```
 
 执行以下脚本加载checkpoint在测试集上进行评估
