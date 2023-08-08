@@ -25,6 +25,8 @@ class REGCNBase(nn.Module):
         self.layer_norm = layer_norm
         self.num_layer = num_layer
         self.dropout_value = dropout
+        self.if_active = active
+        self.if_self_loop=self_loop
 
         # weight and embedding
         self.static_entity_embed = torch.nn.Parameter(torch.Tensor(num_entity, hidden_dim), requires_grad=True)

@@ -17,12 +17,16 @@ class REGCN(nn.Module):
                  opt: torch.optim.Optimizer,
                  ):
         super(REGCN, self).__init__()
+        # common parameters
         self.model = model
         self.data = data
+        self.opt = opt
+        self.name = 'regcn'
+        # data process
         self.train_data, _, self.train_time = dps.split_data_by_time(self.data.train)
         self.valid_data, _, self.valid_time = dps.split_data_by_time(self.data.valid)
         self.test_data, _, self.test_time = dps.split_data_by_time(self.data.test)
-        self.opt = opt
+
         self.seq_len = model.seq_len
         self.grad_norm = 1.0
 
@@ -94,7 +98,7 @@ class REGCN(nn.Module):
                 rank_list.append(ranks)
                 if filter_out:
                     ans = utils.data_process.get_answer(edge, self.data.num_entity, self.data.num_relation * 2)
-                    score = utils.data_process.filter_score(score, ans, edge, self.data.num_relation*2)
+                    score = utils.data_process.filter_score(score, ans, edge, self.data.num_relation * 2)
                     rank = mtc.calculate_rank(score.cpu().numpy(), edge[:, 2].cpu().numpy())
                     rank_list_filter.append(rank)
         all_ranks = np.concatenate(rank_list)
@@ -108,11 +112,17 @@ class REGCN(nn.Module):
     def loss(self, score, target):
         return self.cross_entropy_loss(score, target)
 
-    def get_name(self):
-        name = 'regcn_'
-        dataset = self.data.dataset + '_'
-        dim = 'dim' + str(self.model.hidden_dim) + '_'
-        seq_len = 'seq_len' + str(self.model.seq_len) + '_'
-        layer = 'layer' + str(self.model.num_layer) + '_'
-        dropout = 'dropout' + dps.float_to_int_exp(self.model.dropout_value)
-        return name + dataset + dim + seq_len + layer + dropout
+    def get_config(self):
+        config = {}
+        config['model'] = 'regcn'
+        config['dataset'] = self.data.dataset
+        config['num_entity'] = self.model.num_entity
+        config['num_relation'] = self.model.num_relation
+        config['hidden_dim'] = self.model.hidden_dim
+        config['seq_len'] = self.model.seq_len
+        config['num_layer'] = self.model.num_layer
+        config['dropout'] = self.model.dropout_value
+        config['active'] = self.model.if_active
+        config['self_loop'] = self.model.if_self_loop
+        config['layer_norm'] = self.model.layer_norm
+        return config

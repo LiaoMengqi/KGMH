@@ -15,6 +15,7 @@ class CENBase(nn.Module):
                  seq_len=10,
                  layer_norm=True):
         super(CENBase, self).__init__()
+        self.num_relation = num_relation
         self.channel = channel
         self.width = width
         self.seq_len = seq_len

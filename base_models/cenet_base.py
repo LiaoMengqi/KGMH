@@ -16,6 +16,7 @@ class CeNetBase(nn.Module):
         self.num_entity = num_entity
         self.num_relation = num_relation
         self.dim = dim
+        self.drop_prop=drop_prop
         self.dropout = nn.Dropout(p=drop_prop)
         self.lambdax = lambdax
         self.alpha = alpha

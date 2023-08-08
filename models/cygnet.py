@@ -15,12 +15,15 @@ class CyGNet(nn.Module):
                  data: DataLoader,
                  opt: torch.optim.Optimizer):
         super(CyGNet, self).__init__()
+        # initial common parameters
+        self.name = 'cygnet'
         self.data = data
+        self.opt = opt
+        self.model = model
+        # data process
         self.train_data, _, self.train_time = dps.split_data_by_time(self.data.train)
         self.valid_data, _, self.valid_time = dps.split_data_by_time(self.data.valid)
         self.test_data, _, self.test_time = dps.split_data_by_time(self.data.test)
-        self.opt = opt
-        self.model = model
         self.vocabulary = torch.sparse_coo_tensor(size=([data.num_entity * data.num_relation, data.num_entity]),
                                                   device=data.train.device)
 
@@ -109,10 +112,13 @@ class CyGNet(nn.Module):
             metrics.update(metrics_filter)
         return metrics
 
-    def get_name(self):
-        name = 'cygnet_'
-        dataset = self.data.dataset + '_'
-        alpha = 'alpha' + dps.float_to_int_exp(self.model.alpha) + '_'
-        dim = 'dim' + str(self.model.dim) + '_'
-        penalty = 'penalty' + dps.float_to_int_exp(self.model.penalty)
-        return name + dataset + alpha + dim + penalty
+    def get_config(self):
+        config = {}
+        config['model'] = 'cygnet'
+        config['dataset'] = self.data.dataset
+        config['num_entity'] = self.model.num_entity
+        config['num_relation'] = self.model.num_relation
+        config['h_dim'] = self.model.h_dim
+        config['alpha'] = self.model.alpha
+        config['penalty'] = self.model.penalty
+        return config

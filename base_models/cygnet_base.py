@@ -13,7 +13,8 @@ class CyGNetBase(nn.Module):
         self.reg_fact = 0.01
         self.alpha = alpha
         self.num_entity = num_entity
-        self.dim = h_dim
+        self.num_relation=num_relation
+        self.h_dim = h_dim
         self.unit_time_embed = nn.Parameter(torch.Tensor(1, h_dim))
         self.entity_embed = nn.Parameter(torch.Tensor(num_entity, h_dim))
         self.relation_embed = nn.Parameter(torch.Tensor(num_relation, h_dim))

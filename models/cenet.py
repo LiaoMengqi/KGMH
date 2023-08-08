@@ -19,8 +19,9 @@ class CeNet(nn.Module):
         super(CeNet, self).__init__()
         self.model = model
         self.opt = opt
-        # data process
         self.data = data
+        self.name = 'cenet'
+        # data process
         self.train_data, _, self.train_time = dps.split_data_by_time(self.data.train)
         self.train_data = dps.add_reverse_relation(self.train_data, self.data.num_relation)
         self.valid_data, _, self.valid_time = dps.split_data_by_time(self.data.valid)
@@ -181,6 +182,15 @@ class CeNet(nn.Module):
             metrics.update(metrics_filter)
         return metrics
 
-    def get_name(self):
-        name = 'cenet'
-        return name
+    def get_config(self):
+        config = {}
+        config['model'] = 'cenet'
+        config['dataset'] = self.data.dataset
+        config['num_entity'] = self.model.num_entity
+        config['num_relation'] = self.model.num_relation
+        config['dim'] = self.model.dim
+        config['drop_prop'] = self.model.drop_prop
+        config['lambdax'] = self.model.lambdax
+        config['alpha'] = self.model.alpha
+        config['mode'] = self.model.mode
+        return config

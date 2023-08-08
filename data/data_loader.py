@@ -1,6 +1,7 @@
 from utils.io_func import load_data
 from utils.io_func import load_dict
 from utils.data_process import reverse_dict
+import os
 
 
 class DataLoader(object):
@@ -12,6 +13,10 @@ class DataLoader(object):
         param path: the path of dataset
         """
         self.path = path
+        if not os.path.exists(path):
+            raise Exception('The path \'' + path + '\' don\'t exist!')
+        if dataset is None:
+            raise Exception('You need to specify a dataset!')
         self.dataset = dataset
 
         # data

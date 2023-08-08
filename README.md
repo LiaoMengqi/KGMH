@@ -1,6 +1,7 @@
 # KGTL
 # 更新日志
 本方法库将长期进行维护与更新。
+- 2023-08-08：更改模型加载和保存逻辑，加载模型时不需要再指定模型超参数，可以从保存的文件中读取超参数，更加便捷易用。同时优化了模块的加载逻辑。
 - 2023-08-07：添加CENET模型
 - 2023-06-25：支持gpu选择,例如调用main.py脚本时指定0号gpu`--gpu 0`,修改数据按时间划分的函数,提升数据处理速度
 - 2023-06-15：加入过滤功能,外推模型都支持过滤,调用main.py时添加`--filter`参数来进行过滤
@@ -34,7 +35,14 @@ python main.py --dataset ICEWS14s --model cen --epoch 50 --lr 0.001 --weight-dec
 python main.py --dataset ICEWS14s --model cenet --epoch 100 --amsgrad --lr 0.001 --gpu 0 --weight-decay 1e-5 --early-stop 3
 
 ```
+加载保存的模型继续训练
+```sh
+# 指定 checkpoint id
+python main.py --model cygnet --checkpoint 20230808085552
+```
+
 执行以下脚本加载checkpoint在测试集上进行评估
 ```sh
-python main.py --dataset ICEWS14s --model cygnet --test --checkpoint cygnet_ICEWS14s_alpha5e-1_dim50_penalty-100
+# 激活--test参数并指定 checkpoint id
+python main.py  --model cygnet --test --checkpoint 20230808085552
 ```

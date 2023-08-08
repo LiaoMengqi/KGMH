@@ -19,6 +19,8 @@ class CEN(nn.Module):
         self.model = model
         self.data = data
         self.opt = opt
+        self.name = 'cen'
+
         self.train_data, _, self.train_time = dps.split_data_by_time(self.data.train)
         self.valid_data, _, self.valid_time = dps.split_data_by_time(self.data.valid)
         self.test_data, _, self.test_time = dps.split_data_by_time(self.data.test)
@@ -99,12 +101,16 @@ class CEN(nn.Module):
             metrics.update(metrics_filter)
         return metrics
 
-    def get_name(self):
-        name = 'cen_'
-        data = self.data.dataset + '_'
-        channel = 'channel' + str(self.model.channel) + '_'
-        kernel_width = 'kernel_width' + str(self.model.width) + '_'
-        max_seq_len = 'max_seq_len' + str(self.model.seq_len) + '_'
-        dim = 'dim' + str(self.model.dim) + '_'
-        dropout = 'dropout' + dps.float_to_int_exp(self.model.dropout_value)
-        return name + data + channel + kernel_width + max_seq_len + dim + dropout
+    def get_config(self):
+        config = {}
+        config['model'] = 'cen'
+        config['dataset'] = self.data.dataset
+        config['num_entity'] = self.model.num_entity
+        config['num_relation'] = self.model.num_relation
+        config['dim'] = self.model.dim
+        config['dropout'] = self.model.dropout_value
+        config['channel'] = self.model.channel
+        config['width'] = self.model.width
+        config['seq_len'] = self.model.seq_len
+        config['layer_norm'] = self.model.layer_norm
+        return config

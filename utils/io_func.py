@@ -34,9 +34,9 @@ def load_dict(file: str,
     return dict_data
 
 
-def to_json(content,
-            path='./result/',
-            name='model'):
+def save_json(content,
+            path: str,
+            name: str):
     """
     save experimental data
     :param content: content to save
@@ -52,8 +52,7 @@ def to_json(content,
     f.close()
 
 
-def from_json(path='./result/',
-              name='model'):
+def load_json(path: str, name: str):
     """
     load data
     :param path:file path
@@ -64,35 +63,3 @@ def from_json(path='./result/',
     content = json.load(f)
     f.close()
     return content
-
-
-def save_checkpoint(model: torch.nn.Module,
-                    name: str,
-                    path='./checkpoint/'):
-    """
-    save checkpoint
-    :param model: model
-    :param name: model name
-    :param path: path to save
-    :return: None
-    """
-    if not os.path.exists(path):
-        # create new directory
-        os.mkdir(path)
-    torch.save(model.state_dict(), path + name)
-
-
-def load_checkpoint(model: torch.nn.Module,
-                    name: str,
-                    path='./checkpoint/'):
-    """
-    load checkpoint
-    :param model: model
-    :param name: model name
-    :param path: path where checkpoint saved
-    :return: None
-    """
-    if not os.path.exists(path + name):
-        # create new directory
-        raise Exception('There is no checkpoint named ' + name + ' in ' + path)
-    model.load_state_dict(torch.load(path + name))
