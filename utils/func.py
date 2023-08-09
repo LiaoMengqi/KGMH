@@ -1,6 +1,8 @@
 import torch
 import json
 import os
+import random
+import numpy as np
 
 
 def load_data(file: str,
@@ -35,8 +37,8 @@ def load_dict(file: str,
 
 
 def save_json(content,
-            path: str,
-            name: str):
+              path: str,
+              name: str):
     """
     save experimental data
     :param content: content to save
@@ -63,3 +65,14 @@ def load_json(path: str, name: str):
     content = json.load(f)
     f.close()
     return content
+
+
+def set_seed(seed: int):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True

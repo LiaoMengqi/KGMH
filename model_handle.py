@@ -1,6 +1,6 @@
 import os
 import torch
-from utils.io_func import save_json, load_json
+from utils.func import save_json, load_json
 from utils.optm import get_optimizer
 from data.data_loader import DataLoader
 
@@ -120,10 +120,10 @@ class ModelHandle:
             base_model = self.BaseModel(
                 num_entity=data.num_entity,
                 num_relation=data.num_relation,
-                dim=50,
+                dim=200,
                 drop_prop=0.5,
-                lambdax=1.0,
-                alpha=0.1
+                lambdax=2.0,
+                alpha=0.2
             )
         else:
             raise Exception('model ' + model + ' not exist!')

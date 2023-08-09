@@ -1,5 +1,5 @@
-from utils.io_func import load_data
-from utils.io_func import load_dict
+from utils.func import load_data
+from utils.func import load_dict
 from utils.data_process import reverse_dict
 import os
 

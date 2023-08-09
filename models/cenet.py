@@ -97,13 +97,14 @@ class CeNet(nn.Module):
                       dim=1)
         )
         dot_product_matrix = v_query.mm(v_query.T)
-        exp_matrix = torch.exp(dot_product_matrix - torch.max(dot_product_matrix, dim=1, keepdim=True)[0])
+        exp_matrix = torch.exp(dot_product_matrix - torch.max(dot_product_matrix, dim=1, keepdim=True)[0])+1e-5
         same_matrix = label.unsqueeze(1).repeat(1, label.shape[0]) == label
         mask = 1 - torch.eye(exp_matrix.shape[0], device=self.data.device)
         same_masked = same_matrix * mask
-        cardinality = torch.sum(same_masked, dim=1) + 1e-5
+        cardinality = torch.sum(same_masked, dim=1) + 1e-3
         log_res = -torch.log(exp_matrix / (torch.sum(exp_matrix * mask, dim=1, keepdim=True)))
         l_sup = torch.sum(log_res * same_masked, dim=1) / cardinality
+        l_sup = torch.nan_to_num(l_sup)
         return torch.mean(l_sup)
 
     def his_loss(self,

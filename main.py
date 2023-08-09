@@ -1,6 +1,7 @@
 import argparse
 from model_handle import *
-from utils.io_func import save_json
+from utils.func import save_json
+from utils.func import set_seed
 from utils.optm import get_optimizer
 import time
 
@@ -113,6 +114,7 @@ def evaluate(model, batch_size, model_id, data='test', filter_out=False):
 
 def main(args):
     # choose device
+    set_seed(args.seed)
     model_handle = ModelHandle(args.model)
     if args.gpu != -1:
         if not torch.cuda.is_available() or args.gpu >= torch.cuda.device_count():
@@ -199,6 +201,8 @@ if __name__ == '__main__':
     # other
     parser.add_argument("--gpu", type=int, default=-1,
                         help="use GPU.")
+    parser.add_argument("--seed", type=int, default=0,
+                        help="random seed.")
     args_parsed = parser.parse_args()
 
     main(args_parsed)
