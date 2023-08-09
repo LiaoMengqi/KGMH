@@ -132,7 +132,7 @@ def main(args):
         data.load(load_time=True)
         data.to(device)
         # base model
-        if args.conf:
+        if args.config:
             base_model = model_handle.get_base_model(args, data)
         else:
             base_model = model_handle.get_default_base_model(args.model, data)
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     # model
     parser.add_argument("--model", type=str, required=True,
                         help="choose model")
-    parser.add_argument("--conf", action='store_true', default=False,
+    parser.add_argument("--config", action='store_true', default=False,
                         help="configure parameter")
     parser.add_argument('--checkpoint', type=str, default=None,
                         help='path and name of model saved')

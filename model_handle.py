@@ -30,7 +30,64 @@ class ModelHandle:
     def get_base_model(self,
                        args,
                        data: DataLoader, ):
-        raise NotImplementedError
+        config = {}
+        if self.model == 'cygnet':
+            config['num_entity'] = data.num_entity
+            config['num_relation'] = data.num_relation
+            hints = [
+                ["input hidden dimension (int, >0):", int, 'h_dim'],
+                ["input alpha (float, [0,1]):", float, 'alpha'],
+                ["input penalty (float, <0):", float, 'penalty']
+            ]
+        elif self.model == 'regcn':
+            config['num_entity'] = data.num_entity
+            config['num_relation'] = data.num_relation
+            hints = [
+                ["input hidden dimension (int, >0):", int, 'hidden_dim'],
+                ["input sequence length (int, >0):", int, 'seq_len'],
+                ["input The number of graph convolutional layers (int, >0):", int, 'num_layer'],
+                ["input dropout probability (float ,[0,1)):", float, "dropout"],
+                ["input if use active function (bool, 0 or 1):", bool, "active"],
+                ["input if use self loop (bool, 0 or 1):", bool, "self_loop"],
+                ["input if use normalization (bool, 0 or 1):", bool, "layer_norm"]
+            ]
+        elif self.model == 'cen':
+            config['num_entity'] = data.num_entity
+            config['num_relation'] = data.num_relation
+            hints = [
+                ["input hidden dimension (int, >0):", int, 'dim'],
+                ["input dropout probability (float ,[0,1)):", float, "dropout"],
+                ["input number of convolution channels (int, >0):", int, 'channel'],
+                ["input length of convolution kernel (int, >0):", int, 'width'],
+                ["input length of history sequence to learn (int ,>0):", int, 'seq_len'],
+                ['input if use layer normalization (bool, o or 1):', bool, 'layer_norm']
+            ]
+        elif self.model == 'cenet':
+            config['num_entity'] = data.num_entity
+            config['num_relation'] = data.num_relation
+            hints = [
+                ["input hidden dimension (int, >0):", int, 'dim'],
+                ["input dropout probability (float ,[0,1)):", float, "drop_prop"],
+                ["input lambda (float, >0):", float, 'lambdax'],
+                ['input alpha (float, (0,1]):', float, 'alpha'],
+                ['input mask mode (str, \'soft\' or \'hard\')', str, 'mode']
+            ]
+        else:
+            raise Exception
+        for hint in hints:
+            flag = True
+            while flag:
+                try:
+                    input_text = input(hint[0])
+                    if hint[1] == bool:
+                        config[hint[2]] = hint[1](int(input_text))
+                    else:
+                        config[hint[2]] = hint[1](input_text)
+                except ValueError:
+                    print('input error!')
+                else:
+                    flag = False
+        return self.get_base_model_from_config(config)
 
     def get_base_model_from_config(self, config):
         if self.model == 'cygnet':
@@ -75,7 +132,7 @@ class ModelHandle:
                 mode=config['mode'],
             )
         else:
-            raise Exception('model ' + config['model'] + ' not exist!')
+            raise Exception('model not exist!')
         return base_model
 
     def get_default_base_model(self,
