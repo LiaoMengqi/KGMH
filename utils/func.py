@@ -76,3 +76,12 @@ def set_seed(seed: int):
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
+
+
+def set_default_fp(fp: str):
+    if fp == 'fp16':
+        torch.set_default_dtype(torch.float16)
+    elif fp == 'fp64':
+        torch.set_default_dtype(torch.float64)
+    else:
+        torch.set_default_dtype(torch.float32)

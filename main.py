@@ -2,6 +2,7 @@ import argparse
 from model_handle import *
 from utils.func import save_json
 from utils.func import set_seed
+from utils.func import set_default_fp
 from utils.optm import get_optimizer
 import time
 
@@ -30,7 +31,7 @@ def train(model, epochs, batch_size, step, early_stop, filter_out=False, plot=Fa
         loss = model.train_epoch(batch_size=batch_size)
         time_end = time.time()
         train_time.append(time_end - time_start)
-        loss_history.append(loss)
+        loss_history.append(float(loss))
         print('epoch: %d |loss: %f |time: %fs' % (epoch + 1, loss, time_end - time_start))
         if (epoch + 1) % step == 0:
             time_start = time.time()
@@ -113,9 +114,12 @@ def evaluate(model, batch_size, model_id, data='test', filter_out=False):
 
 
 def main(args):
-    # choose device
+    # set random seed
     set_seed(args.seed)
+    # set floating point precision
+    set_default_fp(args.fp)
     model_handle = ModelHandle(args.model)
+    # choose device
     if args.gpu != -1:
         if not torch.cuda.is_available() or args.gpu >= torch.cuda.device_count():
             device = 'cpu'
@@ -199,6 +203,8 @@ if __name__ == '__main__':
     parser.add_argument("--test", action='store_true', default=False,
                         help="evaluate model on test set, and notice that you must load a checkpoint for this.")
     # other
+    parser.add_argument("--fp", type=str, default='fp32',
+                        help="floating point precision (fp16, fp32 or fp64) ")
     parser.add_argument("--gpu", type=int, default=-1,
                         help="use GPU.")
     parser.add_argument("--seed", type=int, default=0,

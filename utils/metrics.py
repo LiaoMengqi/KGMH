@@ -10,15 +10,15 @@ def calculate_rank(scores: np.ndarray,
 
 
 def calculate_hist(k: int, ranks: np.ndarray):
-    return np.sum(ranks <= k) / len(ranks)
+    return float(np.sum(ranks <= k) / len(ranks))
 
 
 def calculate_mrr(ranks: np.ndarray):
-    return (1. / ranks).sum() / ranks.shape[0]
+    return float((1. / ranks).sum() / ranks.shape[0])
 
 
 def calculate_mr(ranks: np.ndarray):
-    return ranks.mean()
+    return float(ranks.mean())
 
 
 def ranks_to_metrics(metric_list: list,
