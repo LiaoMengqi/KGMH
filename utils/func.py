@@ -48,7 +48,7 @@ def save_json(content,
     """
     if not os.path.exists(path):
         # create new directory
-        os.mkdir(path)
+        os.makedirs(path)
     f = open(path + name + '.json', 'w', encoding='utf-8')
     json.dump(content, f)
     f.close()
@@ -81,6 +81,8 @@ def set_seed(seed: int):
 def set_default_fp(fp: str):
     if fp == 'fp16':
         torch.set_default_dtype(torch.float16)
+    elif fp == 'bf16':
+        torch.set_default_dtype(torch.bfloat16)
     elif fp == 'fp64':
         torch.set_default_dtype(torch.float64)
     else:

@@ -20,14 +20,17 @@ class TransE(nn.Module):
         self.model = transe_base
         self.data = data
         self.opt = opt
+        self.name='transe'
 
     def train_epoch(self,
                     batch_size: int) -> float:
+        self.train()
+        self.opt.zero_grad()
         data_batched = dps.batch_data(self.data.train, batch_size)
+        total_batch = int(len(self.data.train) / batch_size) + (len(self.data.train) % batch_size != 0)
         total_loss = 0
-        for batch in tqdm(data_batched):
-            self.model.train()
-            self.model.zero_grad()
+        for batch_index in tqdm(range(total_batch)):
+            batch = next(data_batched)
             neg_sample = dps.generate_negative_sample(batch, self.data.num_entity)
             loss = self.loss(batch, neg_sample)
             loss.backward()
@@ -36,20 +39,24 @@ class TransE(nn.Module):
         return total_loss
 
     def test(self,
-             batch_size,
+             batch_size=128,
              dataset='valid',
-             mode='obj',
-             metric_list=None):
+             metric_list=None,
+             filter_out=False):
         if metric_list is None:
-            metric_list = ['hist@1', 'hist@3', 'hist@10']
+            metric_list = ['hits@1', 'hits@3', 'hits@10', 'hits@100', 'mr', 'mrr']
         if dataset == 'valid':
-            data_batched = dps.batch_data(self.data.valid, batch_size)
+            data = dps.batch_data(self.data.valid, batch_size)
+            total_batch = int(len(self.data.valid) / batch_size) + (len(self.data.valid) % batch_size != 0)
         elif dataset == 'test':
-            data_batched = dps.batch_data(self.data.test, batch_size)
+            data = dps.batch_data(self.data.test, batch_size)
+            total_batch = int(len(self.data.test) / batch_size) + (len(self.data.test) % batch_size != 0)
         else:
-            raise Exception('dataset ' + dataset + ' is not defined!')
+            raise Exception
+
         rank_list = []
-        for batch in tqdm(data_batched):
+        for batch_index in tqdm(range(total_batch)):
+            batch = next(data)
             with torch.no_grad():
                 hr = self.model.get_entity_embedding(batch[:, 0]) + self.model.get_relation_embedding(batch[:, 1])
                 t = self.model.get_entity_embedding(torch.LongTensor(range(self.data.num_entity)).to(hr.device))
@@ -58,14 +65,8 @@ class TransE(nn.Module):
                 rank = mtc.calculate_rank(score, batch[:, 1].cpu().numpy())
                 rank_list.append(rank)
         all_rank = np.concatenate(rank_list)
-        metric_dict = {}
-        for metric in metric_list:
-            if re.match(r'hist@\d+', metric):
-                n = int(re.findall(r'\d+', metric)[0])
-                metric_dict[metric] = mtc.calculate_hist(n, all_rank)
-            elif metric == 'mr':
-                metric_dict['mr'] = all_rank.mean()
-        return metric_dict
+        metrics = mtc.ranks_to_metrics(metric_list=metric_list, ranks=all_rank)
+        return metrics
 
     def loss(self,
              pos_edge,
@@ -85,3 +86,16 @@ class TransE(nn.Module):
 
     def scale_loss(self, embed):
         return F.relu(embed.norm(p=2, dim=-1) - 1).sum() / embed.shape[0]
+
+    def get_config(self):
+        config = {}
+        config['model'] = self.name
+        config['dataset'] = self.data.dataset
+        config['num_entity'] = self.model.num_entity
+        config['num_relation'] = self.model.num_relation
+        config['emb_dim'] = self.model.emb_dim
+        config['margin'] = self.model.margin
+        config['p_norm'] = self.model.p_norm
+        config['c_e'] = self.model.c_e
+        config['c_r'] = self.model.c_r
+        return config

@@ -7,17 +7,23 @@ import os
 class DataLoader(object):
     def __init__(self,
                  dataset,
-                 path):
+                 root_path,
+                 type):
         """
         param dataset: the name of dataset
         param path: the path of dataset
         """
-        self.path = path
-        if not os.path.exists(path):
-            raise Exception('The path \'' + path + '\' don\'t exist!')
+        self.type = type
+        self.path = root_path + type + '/'
+        if not os.path.exists(self.path):
+            raise Exception('The path \'' + self.path + '\' don\'t exist!')
         if dataset is None:
             raise Exception('You need to specify a dataset!')
         self.dataset = dataset
+
+        self.load_time = True
+        if self.type.split('/')[0] == 'static':
+            self.load_time = False
 
         # data
         self.train = None
@@ -32,19 +38,18 @@ class DataLoader(object):
         self.device = 'cpu'
 
     def load(self,
-             load_time=False,
              encoding='utf-8'):
         """
         Initialize training set, validation set and test set.
         """
         file = self.path + '/' + self.dataset + '/train.txt'
-        self.train = load_data(file, load_time=load_time, encoding=encoding)
+        self.train = load_data(file, load_time=self.load_time, encoding=encoding)
 
         file = self.path + '/' + self.dataset + '/valid.txt'
-        self.valid = load_data(file, load_time=load_time, encoding=encoding)
+        self.valid = load_data(file, load_time=self.load_time, encoding=encoding)
 
         file = self.path + '/' + self.dataset + '/test.txt'
-        self.test = load_data(file, load_time=load_time, encoding=encoding)
+        self.test = load_data(file, load_time=self.load_time, encoding=encoding)
 
         file = self.path + '/' + self.dataset + '/relation2id.txt'
         self.relation2id = load_dict(file)

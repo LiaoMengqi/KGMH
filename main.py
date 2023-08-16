@@ -132,14 +132,14 @@ def main(args):
         model = load_checkpoint(args.checkpoint, model_handle, args, device)
     else:
         # load data
-        data = DataLoader(args.dataset, './data/temporal/extrapolation')
-        data.load(load_time=True)
+        data = DataLoader(args.dataset, root_path='./data/', type=model_handle.get_type(args.model))
+        data.load()
         data.to(device)
         # base model
         if args.config:
-            base_model = model_handle.get_base_model(args, data)
+            base_model = model_handle.get_base_model(data)
         else:
-            base_model = model_handle.get_default_base_model(args.model, data)
+            base_model = model_handle.get_default_base_model(data)
         # Optimizer
         opt = get_optimizer(args, base_model)
         # model
@@ -204,7 +204,7 @@ if __name__ == '__main__':
                         help="evaluate model on test set, and notice that you must load a checkpoint for this.")
     # other
     parser.add_argument("--fp", type=str, default='fp32',
-                        help="floating point precision (fp16, fp32 or fp64) ")
+                        help="floating point precision (fp16, bf16, fp32 or fp64) ")
     parser.add_argument("--gpu", type=int, default=-1,
                         help="use GPU.")
     parser.add_argument("--seed", type=int, default=0,

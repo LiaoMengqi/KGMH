@@ -5,16 +5,24 @@ import torch.nn as nn
 
 
 class TransEBase(nn.Module):
-    def __init__(self, num_entity, num_relation, emb_dim, dtype=torch.float, margin=1.0, p_norm=1, c_e=2, c_r=1):
+    def __init__(self,
+                 num_entity,
+                 num_relation,
+                 emb_dim,
+                 margin=1.0,
+                 p_norm=1,
+                 c_e=2,
+                 c_r=1):
         super(TransEBase, self).__init__()
+        self.num_entity = num_entity
+        self.num_relation=num_relation
+        self.emb_dim = emb_dim
         self.p_norm = p_norm
         self.margin = margin
         self.c_e = c_e
         self.c_r = c_r
-        self.num_entity = num_entity
-        self.emb_dim = emb_dim
-        self.entity_embedding = nn.Embedding(num_entity, emb_dim, dtype=dtype)
-        self.relation_embedding = nn.Embedding(num_relation, emb_dim, dtype=dtype)
+        self.entity_embedding = nn.Embedding(num_entity, emb_dim)
+        self.relation_embedding = nn.Embedding(num_relation, emb_dim)
         self.weight_init()
 
     def weight_init(self):

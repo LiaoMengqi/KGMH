@@ -10,7 +10,17 @@ class ModelHandle:
         self.model = model
         self.BaseModel, self.Model = self.import_model(model)
 
+    @staticmethod
+    def get_type(model_name):
+        if model_name in ['transe', 'rgcn', 'sacn', 'distmilt', 'gcn']:
+            return 'static'
+        elif model_name in ['cygnet', 'regcn', 'cen', 'cenet']:
+            return 'temporal/extrapolation'
+        else:
+            raise Exception
+
     def import_model(self, model):
+        # temporal/extrapolation
         if model == 'cygnet':
             from base_models.cygnet_base import CyGNetBase as BaseModel
             from models.cygnet import CyGNet as Model
@@ -23,14 +33,18 @@ class ModelHandle:
         elif model == 'cenet':
             from base_models.cenet_base import CeNetBase as BaseModel
             from models.cenet import CeNet as Model
+        # static
+        elif model == 'transe':
+            from base_models.transe_base import TransEBase as BaseModel
+            from models.transe import TransE as Model
         else:
             raise Exception('Model error!')
         return BaseModel, Model
 
     def get_base_model(self,
-                       args,
                        data: DataLoader, ):
         config = {}
+        # temporal/extrapolation
         if self.model == 'cygnet':
             config['num_entity'] = data.num_entity
             config['num_relation'] = data.num_relation
@@ -72,6 +86,17 @@ class ModelHandle:
                 ['input alpha (float, (0,1]):', float, 'alpha'],
                 ['input mask mode (str, \'soft\' or \'hard\')', str, 'mode']
             ]
+        # static
+        elif self.model == 'transe':
+            config['num_entity'] = data.num_entity
+            config['num_relation'] = data.num_relation
+            hints = [
+                ["input embedding dimension (int, >0):", int, 'emb_dim'],
+                ["input margin (float, >0):", float, "margin"],
+                ["input normalization p (float, >0):", float, "p_norm"],
+                ['input coefficient of entity scale loss (float, >0):', float, 'c_e'],
+                ['input coefficient of relation scale loss (float, >0):', float, 'c_r']
+            ]
         else:
             raise Exception
         for hint in hints:
@@ -87,103 +112,77 @@ class ModelHandle:
                     print('input error!')
                 else:
                     flag = False
-        return self.get_base_model_from_config(config)
+        return self.get_base_model_from_config(config=config)
 
-    def get_base_model_from_config(self, config):
+    def get_base_model_from_config(self, config=None, data=None):
+        default = False
+        if config is None:
+            default = True
+
         if self.model == 'cygnet':
             base_model = self.BaseModel(
-                num_entity=config['num_entity'],
-                num_relation=config['num_relation'],
-                h_dim=config['h_dim'],
-                alpha=config['alpha'],
-                penalty=config['penalty']
+                num_entity=data.num_entity if default else config['num_entity'],
+                num_relation=data.num_relation if default else config['num_relation'],
+                h_dim=50 if default else config['h_dim'],
+                alpha=0.5 if default else config['alpha'],
+                penalty=1 if default else config['penalty']
             )
         elif self.model == 'regcn':
             base_model = self.BaseModel(
-                num_entity=config['num_entity'],
-                num_relation=config['num_relation'],
-                hidden_dim=config['hidden_dim'],
-                seq_len=config['seq_len'],
-                num_layer=config['num_layer'],
-                dropout=config['dropout'],
-                active=config['active'],
-                self_loop=config['self_loop'],
-                layer_norm=config['layer_norm'],
+                num_entity=data.num_entity if default else config['num_entity'],
+                num_relation=data.num_relation if default else config['num_relation'],
+                hidden_dim=50 if default else config['hidden_dim'],
+                seq_len=10 if default else config['seq_len'],
+                num_layer=3 if default else config['num_layer'],
+                dropout=0.4 if default else config['dropout'],
+                active=True if default else config['active'],
+                self_loop=True if default else config['self_loop'],
+                layer_norm=True if default else config['layer_norm'],
             )
         elif self.model == 'cen':
             base_model = self.BaseModel(
-                num_entity=config['num_entity'],
-                num_relation=config['num_relation'],
-                dim=config['dim'],
-                dropout=config['dropout'],
-                channel=config['channel'],
-                width=config['width'],
-                seq_len=config['seq_len'],
-                layer_norm=config['layer_norm']
+                num_entity=data.num_entity if default else config['num_entity'],
+                num_relation=data.num_relation if default else config['num_relation'],
+                dim=50 if default else config['dim'],
+                dropout=0.4 if default else config['dropout'],
+                channel=50 if default else config['channel'],
+                width=3 if default else config['width'],
+                seq_len=3 if default else config['seq_len'],
+                layer_norm=True if default else config['layer_norm']
             )
         elif self.model == 'cenet':
             base_model = self.BaseModel(
-                num_entity=config['num_entity'],
-                num_relation=config['num_relation'],
-                dim=config['dim'],
-                drop_prop=config['drop_prop'],
-                lambdax=config['lambdax'],
-                alpha=config['alpha'],
-                mode=config['mode'],
+                num_entity=data.num_entity if default else config['num_entity'],
+                num_relation=data.num_relation if default else config['num_relation'],
+                dim=200 if default else config['dim'],
+                drop_prop=0.4 if default else config['drop_prop'],
+                lambdax=2.0 if default else config['lambdax'],
+                alpha=0.2 if default else config['alpha'],
+                mode='soft' if default else config['mode'],
+            )
+        # static
+        elif self.model == 'transe':
+            base_model = self.BaseModel(
+                num_entity=data.num_entity if default else config['num_entity'],
+                num_relation=data.num_relation if default else config['num_relation'],
+                emb_dim=50 if default else config['emb_dim'],
+                margin=1.0 if default else config['margin'],
+                p_norm=1 if default else config['p_norm'],
+                c_e=2 if default else config['c_e'],
+                c_r=1 if default else config['c_r']
             )
         else:
             raise Exception('model not exist!')
         return base_model
 
     def get_default_base_model(self,
-                               model: str,
                                data: DataLoader) -> torch.nn.Module:
         """
         get base model with default parameter
-        :param model: model name
         :param data: dataset
         :return: base model
         """
-        if model == 'regcn':
-            base_model = self.BaseModel(
-                num_entity=data.num_entity,
-                num_relation=data.num_relation,
-                hidden_dim=50,
-                seq_len=3,
-                num_layer=2,
-                dropout=0.2,
-                active=True,
-                self_loop=True,
-                layer_norm=True)
-        elif model == 'cygnet':
-            base_model = self.BaseModel(
-                num_entity=data.num_entity,
-                num_relation=data.num_relation,
-                h_dim=200,
-                alpha=0.8,
-                penalty=-100
-            )
-        elif model == 'cen':
-            base_model = self.BaseModel(
-                num_entity=data.num_entity,
-                num_relation=data.num_relation,
-                dim=50,
-                dropout=0.2,
-                seq_len=3,
-                channel=50,
-                width=3
-            )
-        elif model == 'cenet':
-            base_model = self.BaseModel(
-                num_entity=data.num_entity,
-                num_relation=data.num_relation,
-                dim=200,
-                drop_prop=0.5,
-                lambdax=2.0,
-                alpha=0.2
-            )
-        else:
-            raise Exception('model ' + model + ' not exist!')
+        base_model = self.get_base_model_from_config(config=None, data=data)
         return base_model
 
 
@@ -224,8 +223,8 @@ def load_checkpoint(checkpoint: str,
         raise Exception('The path \'' + path + '\' don\'t exist!')
     config = load_json(path=path, name='config')
     base_model = model_handle.get_base_model_from_config(config)
-    data = DataLoader(config['dataset'], './data/temporal/extrapolation')
-    data.load(load_time=True)
+    data = DataLoader(config['dataset'], root_path='./data/', type=model_handle.get_type(model_handle.model))
+    data.load()
     data.to(device)
     opt = get_optimizer(args, base_model)
     model = model_handle.Model(base_model, data, opt)
