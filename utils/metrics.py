@@ -1,23 +1,29 @@
 import numpy as np
-from scipy.stats import rankdata
+import torch
 import re
 
 
-def calculate_rank(scores: np.ndarray,
-                   target_index: np.ndarray):
-    rank = rankdata(-scores, axis=-1)
-    return rank[np.arange(scores.shape[0]), target_index]
+def calculate_rank(scores: torch.Tensor,
+                   target_index: torch.Tensor):
+    # higher score get higher rank
+    device = scores.device
+    x = torch.Tensor(scores)
+    _, sindex = torch.sort(-x, dim=1)
+    res = torch.zeros_like(x, dtype=sindex.dtype, device=device)
+    index = torch.arange(x.shape[1], device=device).expand(x.shape)
+    t_rank = res.scatter(dim=1, index=sindex, src=index).float() + 1
+    return t_rank[torch.arange(scores.shape[0]), target_index]
 
 
-def calculate_hist(k: int, ranks: np.ndarray):
-    return float(np.sum(ranks <= k) / len(ranks))
+def calculate_hist(k: int, ranks: torch.Tensor):
+    return float((ranks <= k).sum() / len(ranks))
 
 
-def calculate_mrr(ranks: np.ndarray):
+def calculate_mrr(ranks: torch.Tensor):
     return float((1. / ranks).sum() / ranks.shape[0])
 
 
-def calculate_mr(ranks: np.ndarray):
+def calculate_mr(ranks: torch.Tensor):
     return float(ranks.mean())
 
 

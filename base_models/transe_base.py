@@ -15,7 +15,7 @@ class TransEBase(nn.Module):
                  c_r=1):
         super(TransEBase, self).__init__()
         self.num_entity = num_entity
-        self.num_relation=num_relation
+        self.num_relation = num_relation
         self.emb_dim = emb_dim
         self.p_norm = p_norm
         self.margin = margin
@@ -26,14 +26,14 @@ class TransEBase(nn.Module):
         self.weight_init()
 
     def weight_init(self):
-        bound = 6 / math.sqrt(self.emb_dim)
-        nn.init.uniform_(self.entity_embedding.weight, a=-bound, b=bound)
-        nn.init.uniform_(self.relation_embedding.weight, a=-bound, b=bound)
-        with torch.no_grad():
+        # bound = 6 / math.sqrt(self.emb_dim)
+        nn.init.xavier_uniform_(self.entity_embedding.weight)
+        nn.init.xavier_uniform_(self.relation_embedding.weight)
+        """with torch.no_grad():
             norm2 = self.relation_embedding.weight.norm(p=2, dim=1, keepdim=True)
             self.relation_embedding.weight.copy_(self.relation_embedding.weight / norm2)
             norm2 = self.entity_embedding.weight.norm(p=2, dim=1, keepdim=True)
-            self.entity_embedding.weight.copy_(self.entity_embedding.weight / norm2)
+            self.entity_embedding.weight.copy_(self.entity_embedding.weight / norm2)"""
 
     def norm_weight(self):
         with torch.no_grad():

@@ -166,7 +166,7 @@ class ModelHandle:
                 num_entity=data.num_entity if default else config['num_entity'],
                 num_relation=data.num_relation if default else config['num_relation'],
                 emb_dim=50 if default else config['emb_dim'],
-                margin=1.0 if default else config['margin'],
+                margin=5.0 if default else config['margin'],
                 p_norm=1 if default else config['p_norm'],
                 c_e=2 if default else config['c_e'],
                 c_r=1 if default else config['c_r']

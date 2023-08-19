@@ -21,17 +21,22 @@ def split_data_by_time(data: torch.Tensor,
 
 
 def generate_negative_sample(data: torch.Tensor,
-                             num_entity):
+                             num_entity: int,
+                             mode='random',
+                             total_positive=None):
     nagative = data.clone()
     rate = torch.rand(nagative.shape[0])
-    mask = rate < 0.5
-    nagative[:, 0][mask] = (nagative[:, 0][mask] + torch.randint(1, num_entity,
-                                                                 (nagative[:, 0][mask].shape[0],),
-                                                                 device=nagative.device)) % num_entity
-    mask = rate >= 0.5
-    nagative[:, 2][mask] = (nagative[:, 2][mask] + torch.randint(1, num_entity,
-                                                                 (nagative[:, 0][mask].shape[0],),
-                                                                 device=nagative.device)) % num_entity
+    if mode == 'random':
+        mask = rate < 0.5
+        nagative[:, 0][mask] = (nagative[:, 0][mask] + torch.randint(1, num_entity,
+                                                                     (nagative[:, 0][mask].shape[0],),
+                                                                     device=nagative.device)) % num_entity
+        mask = rate >= 0.5
+        nagative[:, 2][mask] = (nagative[:, 2][mask] + torch.randint(1, num_entity,
+                                                                     (nagative[:, 0][mask].shape[0],),
+                                                                     device=nagative.device)) % num_entity
+    elif mode == 'strict':
+        pass
     return nagative
 
 

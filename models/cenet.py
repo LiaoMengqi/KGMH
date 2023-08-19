@@ -169,14 +169,14 @@ class CeNet(MateModel):
                     if self.model.mode == 'soft':
                         mask = torch.softmax(mask, dim=1)
                     score = pred_p * mask
-                    ranks = mtc.calculate_rank(score.cpu().numpy(), batch[:, 2].cpu().numpy())
+                    ranks = mtc.calculate_rank(score, batch[:, 2])
                     rank_list.append(ranks)
                     if filter_out:
                         ans = utils.data_process.get_answer(batch, self.data.num_entity, self.data.num_relation * 2)
                         score = utils.data_process.filter_score(score, ans, batch, self.data.num_relation * 2)
-                        rank = mtc.calculate_rank(score.cpu().numpy(), batch[:, 2].cpu().numpy())
+                        rank = mtc.calculate_rank(score, batch[:, 2])
                         rank_list_filter.append(rank)
-        all_ranks = np.concatenate(rank_list)
+        all_ranks = torch.cat(rank_list)
         metrics = mtc.ranks_to_metrics(metric_list=metric_list, ranks=all_ranks)
         if filter_out:
             all_rank = np.concatenate(rank_list_filter)

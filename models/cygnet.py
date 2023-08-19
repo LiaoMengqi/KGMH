@@ -99,13 +99,13 @@ class CyGNet(MateModel):
             for batch in batches:
                 with torch.no_grad():
                     score = self.model.forward(batch, self.get_vocabulary(batch[:, 0], batch[:, 1]), time_stamp)
-                    rank = mtc.calculate_rank(score.cpu().numpy(), batch[:, 2].cpu().numpy())
+                    rank = mtc.calculate_rank(score, batch[:, 2])
                     rank_list.append(rank)
                     if filter_out:
                         score = utils.data_process.filter_score(score, ans, batch, self.data.num_relation)
-                        rank = mtc.calculate_rank(score.cpu().numpy(), batch[:, 2].cpu().numpy())
+                        rank = mtc.calculate_rank(score, batch[:, 2])
                         rank_list_filter.append(rank)
-        all_rank = np.concatenate(rank_list)
+        all_rank = torch.cat(rank_list)
         metrics = mtc.ranks_to_metrics(metric_list, all_rank)
         if filter_out:
             all_rank = np.concatenate(rank_list_filter)
