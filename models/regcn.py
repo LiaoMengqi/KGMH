@@ -9,9 +9,9 @@ from tqdm import tqdm
 import utils.metrics as mtc
 import numpy as np
 import utils
+from models.mate_model import MateModel
 
-
-class REGCN(nn.Module):
+class REGCN(MateModel):
     def __init__(self, model: REGCNBase,
                  data: DataLoader,
                  opt: torch.optim.Optimizer,

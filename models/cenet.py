@@ -9,9 +9,10 @@ from data.data_loader import DataLoader
 import utils.data_process as dps
 import utils.metrics as mtc
 import utils
+from models.mate_model import MateModel
 
 
-class CeNet(nn.Module):
+class CeNet(MateModel):
     def __init__(self,
                  model: CeNetBase,
                  data: DataLoader,
@@ -97,7 +98,7 @@ class CeNet(nn.Module):
                       dim=1)
         )
         dot_product_matrix = v_query.mm(v_query.T)
-        exp_matrix = torch.exp(dot_product_matrix - torch.max(dot_product_matrix, dim=1, keepdim=True)[0])+1e-5
+        exp_matrix = torch.exp(dot_product_matrix - torch.max(dot_product_matrix, dim=1, keepdim=True)[0]) + 1e-5
         same_matrix = label.unsqueeze(1).repeat(1, label.shape[0]) == label
         mask = 1 - torch.eye(exp_matrix.shape[0], device=self.data.device)
         same_masked = same_matrix * mask

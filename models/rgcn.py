@@ -9,9 +9,10 @@ from utils.data_process import generate_negative_sample
 import utils.data_process as dps
 from tqdm import tqdm
 import utils.metrics as mtc
+from models.mate_model import MateModel
 
 
-class RGCN(nn.Module):
+class RGCN(MateModel):
     def __init__(self,
                  rgcn_base: RGCNBase,
                  data: DataLoader,

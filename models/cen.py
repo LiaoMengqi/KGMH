@@ -8,9 +8,10 @@ from data.data_loader import DataLoader
 import utils.data_process as dps
 import utils.metrics as mtc
 import utils
+from models.mate_model import MateModel
 
 
-class CEN(nn.Module):
+class CEN(MateModel):
     def __init__(self,
                  model: CENBase,
                  data: DataLoader,

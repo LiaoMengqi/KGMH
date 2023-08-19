@@ -9,9 +9,10 @@ from base_models.transe_base import TransEBase
 import utils.data_process as dps
 from data.data_loader import DataLoader
 import utils.metrics as mtc
+from models.mate_model import MateModel
 
 
-class TransE(nn.Module):
+class TransE(MateModel):
     def __init__(self,
                  transe_base: TransEBase,
                  data: DataLoader,
@@ -20,7 +21,7 @@ class TransE(nn.Module):
         self.model = transe_base
         self.data = data
         self.opt = opt
-        self.name='transe'
+        self.name = 'transe'
 
     def train_epoch(self,
                     batch_size: int) -> float:

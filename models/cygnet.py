@@ -8,9 +8,10 @@ import utils.data_process as dps
 from tqdm import tqdm
 import utils.metrics as mtc
 import numpy as np
+from models.mate_model import MateModel
 
 
-class CyGNet(nn.Module):
+class CyGNet(MateModel):
     def __init__(self, model: CyGNetBase,
                  data: DataLoader,
                  opt: torch.optim.Optimizer):
