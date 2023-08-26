@@ -7,7 +7,7 @@ from utils.optm import get_optimizer
 import time
 
 
-def train(model, epochs, batch_size, step, early_stop, filter_out=False, plot=False):
+def train(model, epochs, batch_size, step, early_stop, monitor, filter_out=False, plot=False):
     """
     train model
     :param plot:
@@ -24,6 +24,8 @@ def train(model, epochs, batch_size, step, early_stop, filter_out=False, plot=Fa
     loss_history = []
     train_time = []
     evaluate_time = []
+    if filter_out:
+        monitor = 'filter ' + monitor
     best = 0
     tolerance = early_stop
     for epoch in range(epochs):
@@ -39,7 +41,7 @@ def train(model, epochs, batch_size, step, early_stop, filter_out=False, plot=Fa
             time_end = time.time()
             evaluate_time.append(time_end - time_start)
 
-            for key in metrics.keys():
+            for key in sorted(metrics.keys()):
                 print(key, ': ', metrics[key], ' |', end='')
                 if key not in metric_history.keys():
                     metric_history[key] = []
@@ -47,7 +49,7 @@ def train(model, epochs, batch_size, step, early_stop, filter_out=False, plot=Fa
                 else:
                     metric_history[key].append(metrics[key])
             print('time: %f' % (time_end - time_start))
-            if metric_history['mrr'][-1] < metric_history['mrr'][best]:
+            if metric_history[monitor][-1] < metric_history[monitor][best]:
                 # performance decline
                 if early_stop > 0:
                     tolerance -= 1
@@ -61,13 +63,10 @@ def train(model, epochs, batch_size, step, early_stop, filter_out=False, plot=Fa
                 best = (epoch // step)
 
     print("\n**********************************finish**********************************\n")
-    print("best : hits@1: %f |hits@3: %f |hits@10: %f |hits@100: %f |mr: %f |mrr: %f" %
-          (metric_history['hits@1'][best],
-           metric_history['hits@3'][best],
-           metric_history['hits@10'][best],
-           metric_history['hits@100'][best],
-           metric_history['mr'][best],
-           metric_history['mrr'][best],))
+    print("best : ", end='')
+    for key in sorted(metric_history.keys()):
+        print(key, ' ', metric_history[key][best], ' |', end='')
+    print()
     if plot:
         # plot loss and metrics
         from utils.plot import hist_value
@@ -154,7 +153,7 @@ def main(args):
         evaluate(model, args.batch_size, model_id=model_id, filter_out=args.filter)
     else:
         # train
-        train(model, args.epoch, args.batch_size, args.eva_step, args.early_stop, filter_out=args.filter,
+        train(model, args.epoch, args.batch_size, args.eva_step, args.early_stop, args.monitor, filter_out=args.filter,
               plot=args.plot)
 
 
@@ -197,6 +196,8 @@ if __name__ == '__main__':
                         help="evaluate model on valid set after 'eva-step' step of training.")
     parser.add_argument("--early-stop", type=int, default=0,
                         help="patience for early stop.")
+    parser.add_argument("--monitor", type=str, default='mrr',
+                        help="monitor metric for early stop ")
     parser.add_argument("--plot", action='store_true', default=False,
                         help="plot loss and metrics.")
     # test

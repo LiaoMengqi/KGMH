@@ -2,6 +2,7 @@ import math
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class TransEBase(nn.Module):
@@ -53,5 +54,7 @@ class TransEBase(nn.Module):
         """
         Loss described in paper-Translating Embeddings for Modeling Multi-relational Data
         """
-        return (self.entity_embedding(edge[:, 0]) + self.relation_embedding(edge[:, 1]) - self.entity_embedding(
-            edge[:, 2])).norm(p=self.p_norm, dim=-1)
+        h = F.normalize(self.entity_embedding(edge[:, 0]), 2, -1)
+        r = F.normalize(self.relation_embedding(edge[:, 1]), 2, -1)
+        t = F.normalize(self.entity_embedding(edge[:, 2]), 2, -1)
+        return (h + r - t).norm(p=self.p_norm, dim=-1)

@@ -16,81 +16,75 @@ class RGCN(MateModel):
     def __init__(self,
                  rgcn_base: RGCNBase,
                  data: DataLoader,
-                 opt: torch.optim.Optimizer,
-                 mode='prediction',
-                 w=5,
+                 opt: torch.optim.Optimizer
                  ):
         super(RGCN, self).__init__()
         self.model = rgcn_base
         self.data = data
         self.opt = opt
-        self.mode = mode
-        if self.mode == 'prediction':
-            self.w = w
-            self.dist_mult = DistMult(self.model.num_relation, self.model.dims[-1])
-            self.opt.add_param_group({'params': self.dist_mult.parameters()})
+        self.name = 'rgcn'
+
+        self.dist_mult = DistMult(self.model.num_relation, self.model.dims[-1])
+        self.opt.add_param_group({'params': self.dist_mult.parameters()})
         self.cross_entropy = nn.CrossEntropyLoss(reduction='sum')
 
-        self.h = None
-
     def train_epoch(self,
-                    batch_size: int,
-                    save_h=False,
-                    ):
+                    batch_size=128):
         self.train()
         self.opt.zero_grad()
         edge = self.data.train
         total_loss = 0
-        if self.mode == 'prediction':
-            # generate negative edge
-            nag_list = []
-            for i in range(self.w):
-                nag_list.append(generate_negative_sample(edge, self.model.num_entity))
-            nag_edge = torch.cat(nag_list, dim=0)
-            data = torch.cat([edge, nag_edge], dim=0)
-            target = torch.cat([torch.ones(edge.shape[0], dtype=torch.long, device=data.device),
-                                torch.zeros(nag_edge.shape[0], dtype=torch.long, device=data.device)]).unsqueeze(1)
-            data = torch.cat([data, target], dim=-1)
-            batches = dps.batch_data(data, batch_size)
-            h_output = self.model.forward(edge)
-            for batch in tqdm(batches):
-                loss = self.loss(h_output, edge=batch[:, 0:3], link_tag=batch[:, 3])
-                loss.backward(retain_graph=True)
-                total_loss = total_loss + float(loss)
-            if save_h:
-                self.h = h_output.detach().clone()
-        else:
-            raise NotImplementedError
-        # full batch optimization
-        self.opt.step()
-        return total_loss
+        # generate negative edge
+        nag_edge = generate_negative_sample(edge, self.model.num_entity)
+        data = torch.cat([edge, nag_edge], dim=0)
+        target = torch.cat([torch.ones(edge.shape[0], dtype=torch.long, device=data.device),
+                            torch.zeros(nag_edge.shape[0], dtype=torch.long, device=data.device)]).unsqueeze(1)
+        data = torch.cat([data, target], dim=-1)
+        h_output = self.model.forward(edge)
 
-    def test(self, batch_size,
+        batches = dps.batch_data(data, batch_size)
+        total_batch = int(len(data) / batch_size) + (len(data) % batch_size != 0)
+        for batch_index in tqdm(range(total_batch)):
+            batch = next(batches)
+            loss = self.loss(h_output, edge=batch[:, 0:3], link_tag=batch[:, 3])
+            loss.backward(retain_graph=True)
+            self.opt.step()
+            total_loss += float(loss)
+        # full batch optimization
+
+        return total_loss / total_batch
+
+    def test(self,
+             batch_size=128,
              dataset='valid',
-             metric_list=None) -> dict:
+             metric_list=None,
+             filter_out=False) -> dict:
         if metric_list is None:
-            metric_list = ['hist@1', 'hist@3', 'hist@10']
-        if self.h is None:
-            with torch.no_grad():
-                self.h = self.model.forward(self.data.train)
+            metric_list = ['hits@1', 'hits@3', 'hits@10', 'hits@100', 'mr', 'mrr']
+
         if dataset == 'valid':
             data_batched = dps.batch_data(self.data.valid, batch_size)
+            total_batch = int(len(self.data.valid) / batch_size) + (len(self.data.valid) % batch_size != 0)
         elif dataset == 'test':
             data_batched = dps.batch_data(self.data.test, batch_size)
+            total_batch = int(len(self.data.test) / batch_size) + (len(self.data.test) % batch_size != 0)
         else:
             raise Exception('dataset ' + dataset + ' is not defined!')
+
         rank_list = []
-        for batch in tqdm(data_batched):
-            with torch.no_grad():
+        with torch.no_grad():
+            h = self.model.forward(self.data.train)
+            for batch_index in tqdm(range(total_batch)):
+                batch = next(data_batched)
                 sr = batch[:, :2]
-                obj = torch.arange(0, self.h.shape[0], device=sr.device).reshape(1, self.h.shape[0], 1)
+                obj = torch.arange(0, h.shape[0], device=sr.device).reshape(1, h.shape[0], 1)
                 obj = obj.expand(sr.shape[0], -1, 1)
-                sr = sr.unsqueeze(1).expand(-1, self.h.shape[0], 2)
+                sr = sr.unsqueeze(1).expand(-1, h.shape[0], 2)
                 edges = torch.cat((sr, obj), dim=2)
-                score = self.dist_mult(self.h[edges[:, :, 0]], self.h[edges[:, :, 2]], edges[:, :, 1])
-                rank = mtc.calculate_rank(score.cpu().numpy(), batch[:, 1].cpu().numpy())
+                score = self.dist_mult(h[edges[:, :, 0]], h[edges[:, :, 2]], edges[:, :, 1])
+                rank = mtc.calculate_rank(score, batch[:, 1])
                 rank_list.append(rank)
-        all_rank = np.concatenate(rank_list)
+        all_rank = torch.cat(rank_list)
         metrics = mtc.ranks_to_metrics(metric_list, all_rank)
         return metrics
 
@@ -101,18 +95,17 @@ class RGCN(MateModel):
              h_input,
              edge=None,
              link_tag=None,
-             class_tag=None,
              use_l2_regularization=False) -> torch.Tensor:
-        if self.mode == 'classification':
-            raise NotImplementedError
-        elif self.mode == 'prediction':
-            score = nn.functional.sigmoid(self.dist_mult.forward(h_input[edge[:, 0]],
-                                                                 h_input[edge[:, 2]],
-                                                                 edge[:, 1])).unsqueeze(1)
-            score = torch.cat([1 - score, score], dim=1)
-            loss = self.cross_entropy(score, link_tag) / edge.shape[0]
-            if use_l2_regularization:
-                loss.add_(self.weight_decay())
-        else:
-            raise NotImplementedError
+        score = nn.functional.sigmoid(self.dist_mult.forward(h_input[edge[:, 0]],
+                                                             h_input[edge[:, 2]],
+                                                             edge[:, 1])).unsqueeze(1)
+        score = torch.cat([1 - score, score], dim=1)
+        loss = self.cross_entropy(score, link_tag)
+        if use_l2_regularization:
+            loss = loss + self.weight_decay()
         return loss
+
+    def get_config(self):
+        config = {}
+        config['model'] = 'rgcn'
+        return config

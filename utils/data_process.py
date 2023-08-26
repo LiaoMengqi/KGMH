@@ -23,7 +23,8 @@ def split_data_by_time(data: torch.Tensor,
 def generate_negative_sample(data: torch.Tensor,
                              num_entity: int,
                              mode='random',
-                             total_positive=None):
+                             total_positive=None,
+                             index=None):
     nagative = data.clone()
     rate = torch.rand(nagative.shape[0])
     if mode == 'random':
@@ -36,7 +37,15 @@ def generate_negative_sample(data: torch.Tensor,
                                                                      (nagative[:, 0][mask].shape[0],),
                                                                      device=nagative.device)) % num_entity
     elif mode == 'strict':
-        pass
+        """batch_ans = total_positive.index_select(index).todense()
+        zero_indices = torch.nonzero(batch_ans == 0)
+        x, i, c = torch.unique(zero_indices[:, 0], return_counts=True, return_inverse=True)
+        abs_index = torch.nonzero(zero_indices[:, 0][1:] != zero_indices[:, 0][:-1])[:, 0] + 1
+        indices = torch.cat([torch.LongTensor([0]), abs_index])
+        rlt_index = torch.randint(num_entity, size=c.shape) % c
+        full_index = abs_index + rlt_index
+        sample = zero_indices[full_index]"""
+        raise NotImplementedError
     return nagative
 
 
@@ -58,15 +67,6 @@ def batch_data(data: torch.Tensor,
         else:
             yield data[b_index], label[b_index]
 
-
-def float_to_int_exp(num) -> str:
-    exp = 0
-    while num % 1 != 0:
-        num *= 10
-        exp += 1
-    if exp == 0:
-        return str(int(num))
-    return str(int(num)) + 'e-' + str(exp)
 
 
 def add_reverse_relation(edges: list,

@@ -37,6 +37,10 @@ class ModelHandle:
         elif model == 'transe':
             from base_models.transe_base import TransEBase as BaseModel
             from models.transe import TransE as Model
+        elif model == 'rgcn':
+            from base_models.rgcn_base import RGCNBase as BaseModel
+            from models.rgcn import RGCN as Model
+
         else:
             raise Exception('Model error!')
         return BaseModel, Model
@@ -165,11 +169,24 @@ class ModelHandle:
             base_model = self.BaseModel(
                 num_entity=data.num_entity if default else config['num_entity'],
                 num_relation=data.num_relation if default else config['num_relation'],
-                emb_dim=50 if default else config['emb_dim'],
-                margin=5.0 if default else config['margin'],
+                emb_dim=200 if default else config['emb_dim'],
+                margin=2.0 if default else config['margin'],
                 p_norm=1 if default else config['p_norm'],
-                c_e=2 if default else config['c_e'],
-                c_r=1 if default else config['c_r']
+                c_e=0 if default else config['c_e'],
+                c_r=0 if default else config['c_r']
+            )
+        elif self.model == 'rgcn':
+            base_model = self.BaseModel(
+                dim_list=[50, 50, 50],
+                num_relation=data.num_relation if default else config['num_relation'],
+                num_entity=data.num_entity if default else config['num_entity'],
+                use_basis=False,
+                num_basis=10,
+                use_block=False,
+                num_block=10,
+                init_embed=True,
+                dropout_s=None,
+                dropout_o=None
             )
         else:
             raise Exception('model not exist!')
