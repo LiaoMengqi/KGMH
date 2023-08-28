@@ -72,5 +72,5 @@ class CeNetBase(nn.Module):
         simi_nhis = F.tanh(self.linear_nhis(
             self.dropout(
                 torch.cat([self.entity_embeds[data_batched[:, 0]], self.rel_embeds[data_batched[:, 1]]], dim=1))))
-        h_nhis = simi_nhis.mm(self.entity_embeds.T) + bias
+        h_nhis = simi_nhis.mm(self.entity_embeds.T) - bias
         return h_his, h_nhis
