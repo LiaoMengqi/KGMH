@@ -188,7 +188,7 @@ if __name__ == '__main__':
                         help="norm to clip gradient to")
 
     # train
-    parser.add_argument("--epoch", type=int, default=15,
+    parser.add_argument("--epoch", type=int, default=30,
                         help="learning rate")
     parser.add_argument("--batch-size", type=int, default=1024,
                         help="batch size.")

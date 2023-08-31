@@ -48,58 +48,64 @@ class ModelHandle:
     def get_base_model(self,
                        data: DataLoader, ):
         config = {}
+        config['num_entity'] = data.num_entity
+        config['num_relation'] = data.num_relation
         # temporal/extrapolation
         if self.model == 'cygnet':
-            config['num_entity'] = data.num_entity
-            config['num_relation'] = data.num_relation
             hints = [
                 ["input hidden dimension (int, >0):", int, 'h_dim'],
                 ["input alpha (float, [0,1]):", float, 'alpha'],
                 ["input penalty (float, <0):", float, 'penalty']
             ]
         elif self.model == 'regcn':
-            config['num_entity'] = data.num_entity
-            config['num_relation'] = data.num_relation
             hints = [
                 ["input hidden dimension (int, >0):", int, 'hidden_dim'],
                 ["input sequence length (int, >0):", int, 'seq_len'],
                 ["input The number of graph convolutional layers (int, >0):", int, 'num_layer'],
                 ["input dropout probability (float ,[0,1)):", float, "dropout"],
-                ["input if use active function (bool, 0 or 1):", bool, "active"],
-                ["input if use self loop (bool, 0 or 1):", bool, "self_loop"],
-                ["input if use normalization (bool, 0 or 1):", bool, "layer_norm"]
+                ["whether to use active function (bool, 0 or 1):", bool, "active"],
+                ["whether to use self loop (bool, 0 or 1):", bool, "self_loop"],
+                ["whether to use normalization (bool, 0 or 1):", bool, "layer_norm"]
             ]
         elif self.model == 'cen':
-            config['num_entity'] = data.num_entity
-            config['num_relation'] = data.num_relation
             hints = [
                 ["input hidden dimension (int, >0):", int, 'dim'],
                 ["input dropout probability (float ,[0,1)):", float, "dropout"],
-                ["input number of convolution channels (int, >0):", int, 'channel'],
-                ["input length of convolution kernel (int, >0):", int, 'width'],
-                ["input length of history sequence to learn (int ,>0):", int, 'seq_len'],
-                ['input if use layer normalization (bool, o or 1):', bool, 'layer_norm']
+                ["input the number of convolution channels (int, >0):", int, 'channel'],
+                ["input the length of convolution kernel (int, >0):", int, 'width'],
+                ["input the length of history sequence to learn (int ,>0):", int, 'seq_len'],
+                ['whether to use layer normalization (bool, 0 or 1):', bool, 'layer_norm']
             ]
         elif self.model == 'cenet':
-            config['num_entity'] = data.num_entity
-            config['num_relation'] = data.num_relation
             hints = [
                 ["input hidden dimension (int, >0):", int, 'dim'],
                 ["input dropout probability (float ,[0,1)):", float, "drop_prop"],
                 ["input lambda (float, >0):", float, 'lambdax'],
                 ['input alpha (float, (0,1]):', float, 'alpha'],
-                ['input mask mode (str, \'soft\' or \'hard\')', str, 'mode']
+                ['input witch mask mode to use (str, \'soft\' or \'hard\')', str, 'mode']
             ]
         # static
         elif self.model == 'transe':
-            config['num_entity'] = data.num_entity
-            config['num_relation'] = data.num_relation
             hints = [
                 ["input embedding dimension (int, >0):", int, 'emb_dim'],
                 ["input margin (float, >0):", float, "margin"],
                 ["input normalization p (float, >0):", float, "p_norm"],
                 ['input coefficient of entity scale loss (float, >0):', float, 'c_e'],
                 ['input coefficient of relation scale loss (float, >0):', float, 'c_r']
+            ]
+        elif self.model == 'rgcn':
+            hints = [
+                ["input dimension list of R-GCN layer (list[int], number of item >=2, value of item >0):", list,
+                 'dim_list', int],
+                ["whether use basis decompose (bool, 0 or 1):", bool, "use_basis"],
+                ["if use basis decompose, input the number of basis (int, >0):", int, "num_basis"],
+                ["if don't use basis decompose, whether use block decompose (bool, 0 or 1):", bool, "use_block"],
+                [
+                    "if use block decompose, input the size of block, "
+                    "each dimension must can be divided by the size of block (int, >0):",
+                    int, "num_block"],
+                ["input dropout probability of self-loop (float ,[0,1)):", float, "dropout_s"],
+                ["input dropout probability of non-self-loop (float ,[0,1)):", float, "dropout_o"]
             ]
         else:
             raise Exception
@@ -110,6 +116,13 @@ class ModelHandle:
                     input_text = input(hint[0])
                     if hint[1] == bool:
                         config[hint[2]] = hint[1](int(input_text))
+                    elif hint[1] == list:
+                        input_text = input_text.replace('[', '')
+                        input_text = input_text.replace(']', '')
+                        input_text = input_text.split(',')
+                        for i in range(len(input_text)):
+                            input_text[i] = hint[3](input_text[i])
+                        config[hint[2]] = input_text
                     else:
                         config[hint[2]] = hint[1](input_text)
                 except ValueError:
@@ -180,13 +193,12 @@ class ModelHandle:
                 dim_list=[50, 50, 50],
                 num_relation=data.num_relation if default else config['num_relation'],
                 num_entity=data.num_entity if default else config['num_entity'],
-                use_basis=False,
-                num_basis=10,
-                use_block=False,
-                num_block=10,
-                init_embed=True,
-                dropout_s=None,
-                dropout_o=None
+                use_basis=False if default else config['use_basis'],
+                num_basis=10 if default else config['num_basis'],
+                use_block=False if default else config['use_block'],
+                num_block=10 if default else config['num_block'],
+                dropout_s=0 if default else config['dropout_s'],
+                dropout_o=0 if default else config['dropout_o']
             )
         else:
             raise Exception('model not exist!')

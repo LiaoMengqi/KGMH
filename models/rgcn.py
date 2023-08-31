@@ -27,6 +27,7 @@ class RGCN(MateModel):
         self.dist_mult = DistMult(self.model.num_relation, self.model.dims[-1])
         self.opt.add_param_group({'params': self.dist_mult.parameters()})
         self.cross_entropy = nn.CrossEntropyLoss(reduction='sum')
+        self.ans = None
 
     def train_epoch(self,
                     batch_size=128):
@@ -40,18 +41,17 @@ class RGCN(MateModel):
         target = torch.cat([torch.ones(edge.shape[0], dtype=torch.long, device=data.device),
                             torch.zeros(nag_edge.shape[0], dtype=torch.long, device=data.device)]).unsqueeze(1)
         data = torch.cat([data, target], dim=-1)
-        h_output = self.model.forward(edge)
 
         batches = dps.batch_data(data, batch_size)
         total_batch = int(len(data) / batch_size) + (len(data) % batch_size != 0)
+        h_output = self.model.forward(edge)
         for batch_index in tqdm(range(total_batch)):
             batch = next(batches)
             loss = self.loss(h_output, edge=batch[:, 0:3], link_tag=batch[:, 3])
             loss.backward(retain_graph=True)
-            self.opt.step()
+            # loss.backward()
             total_loss += float(loss)
-        # full batch optimization
-
+        self.opt.step()
         return total_loss / total_batch
 
     def test(self,
@@ -59,6 +59,10 @@ class RGCN(MateModel):
              dataset='valid',
              metric_list=None,
              filter_out=False) -> dict:
+        if filter_out and self.ans is None:
+            self.ans = dps.get_answer(torch.cat([self.data.train, self.data.valid, self.data.test], dim=0),
+                                      self.data.num_entity, self.data.num_relation)
+
         if metric_list is None:
             metric_list = ['hits@1', 'hits@3', 'hits@10', 'hits@100', 'mr', 'mrr']
 
@@ -72,6 +76,8 @@ class RGCN(MateModel):
             raise Exception('dataset ' + dataset + ' is not defined!')
 
         rank_list = []
+        rank_list_filter = []
+        self.eval()
         with torch.no_grad():
             h = self.model.forward(self.data.train)
             for batch_index in tqdm(range(total_batch)):
@@ -84,8 +90,16 @@ class RGCN(MateModel):
                 score = self.dist_mult(h[edges[:, :, 0]], h[edges[:, :, 2]], edges[:, :, 1])
                 rank = mtc.calculate_rank(score, batch[:, 1])
                 rank_list.append(rank)
+                if filter_out:
+                    score = dps.filter_score(score, self.ans, batch, self.data.num_relation)
+                    rank = mtc.calculate_rank(score, batch[:, 2])
+                    rank_list_filter.append(rank)
         all_rank = torch.cat(rank_list)
         metrics = mtc.ranks_to_metrics(metric_list, all_rank)
+        if filter_out:
+            all_rank = torch.cat(rank_list_filter)
+            metrics_filter = mtc.ranks_to_metrics(metric_list, all_rank, filter_out)
+            metrics.update(metrics_filter)
         return metrics
 
     def weight_decay(self, penalty=0.01):
@@ -108,4 +122,12 @@ class RGCN(MateModel):
     def get_config(self):
         config = {}
         config['model'] = 'rgcn'
+        config['num_relation'] = self.data.num_relation
+        config['num_entity'] = self.data.num_entity
+        config['use_basis'] = True,
+        config['num_basis'] = 10,
+        config['use_block'] = False,
+        config['num_block'] = 10,
+        config['dropout_s'] = 0,
+        config['dropout_o'] = 0
         return config

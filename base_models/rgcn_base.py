@@ -13,15 +13,13 @@ class RGCNBase(nn.Module):
                  num_basis=10,
                  use_block=False,
                  num_block=10,
-                 init_embed=True,
-                 dropout_s=None,
-                 dropout_o=None
+                 dropout_s=0,
+                 dropout_o=0
                  ):
         super(RGCNBase, self).__init__()
         self.layers = nn.ModuleList()
         self.num_relation = num_relation
         self.dims = dim_list
-        self.init_embed = init_embed
         if len(dim_list) < 2:
             raise Exception('At least have two dimension!')
         for i in range(len(dim_list) - 1):
@@ -36,31 +34,24 @@ class RGCNBase(nn.Module):
                                          dropout_o=dropout_o
                                          )
                                )
-        self.num_layer = len(dim_list) - 1
 
-        if not init_embed:
-            self.entity_embed = None
-        else:
-            self.num_entity = num_entity
-            if num_entity is None:
-                raise Exception
-            self.entity_embed = nn.Embedding(num_entity, embedding_dim=dim_list[0])
-            self.wight_init()
+        self.num_layer = len(dim_list) - 1
+        self.num_entity = num_entity
+        self.entity_embed = nn.Embedding(num_entity, embedding_dim=dim_list[0])
+        self.wight_init()
 
     def wight_init(self):
         pass
 
     def forward(self,
                 edges: torch.Tensor,
-                h_input=None,
-                training=True):
+                h_input=None):
         # initial input representation
         if h_input is None:
-            if not self.init_embed:
-                raise Exception
             h_input = self.entity_embed.weight
 
         # return representation of the last layer
+
         for i in range(self.num_layer):
             h_input = F.relu(self.layers[i](h_input, edges))
         return h_input

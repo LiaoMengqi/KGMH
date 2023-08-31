@@ -13,8 +13,8 @@ class RGCNLayer(nn.Module):
                  use_block=False,
                  num_block=1,
                  self_loop=True,
-                 dropout_s=None,
-                 dropout_o=None
+                 dropout_s=0,
+                 dropout_o=0
                  ):
         super(RGCNLayer, self).__init__()
         self.use_basis = use_basis
@@ -23,12 +23,8 @@ class RGCNLayer(nn.Module):
         self.output_dim = output_dim
         self.num_rels = num_rels
         self.self_loop = self_loop
-        self.dropout_s = None
-        self.dropout_o = None
-        if dropout_s:
-            self.dropout_s = torch.nn.Dropout(p=dropout_s, inplace=False)
-        if dropout_o:
-            self.dropout_o = torch.nn.Dropout(p=dropout_o, inplace=False)
+        self.dropout_s = torch.nn.Dropout(p=dropout_s, inplace=True)
+        self.dropout_o = torch.nn.Dropout(p=dropout_o, inplace=True)
 
         if use_basis:
             self.num_basis = num_basis
@@ -45,6 +41,7 @@ class RGCNLayer(nn.Module):
             self.weight = nn.Parameter(torch.Tensor(num_rels, input_dim, output_dim))
         if self_loop:
             self.self_loop_weigt = nn.Parameter(torch.Tensor(input_dim, output_dim))
+
         self.weight_init()
 
     def weight_init(self):
@@ -109,15 +106,13 @@ class RGCNLayer(nn.Module):
         else:
             msg = torch.bmm(input_h[src].unsqueeze(1), self.get_relation_weight(rel)).squeeze(1)
         # dropout
-        if self.dropout_o is not None:
-            msg = self.dropout_o(msg)
+        msg = self.dropout_o(msg)
         # aggregate message
         dst_index, msg = self.aggregate(msg, dst)
         # self-loop message
         if self.self_loop:
-            input_h = torch.mm(input_h, self.self_loop_weigt)
-            if self.dropout_s is not None:
-                input_h = self.dropout_s(input_h)
+            h = torch.mm(input_h, self.self_loop_weigt)
+            h = self.dropout_s(h)
         # compose message
-        input_h[dst_index] = input_h[dst_index].add_(msg)
-        return input_h
+        h[dst_index] = h[dst_index].add_(msg)
+        return h

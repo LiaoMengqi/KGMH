@@ -47,7 +47,7 @@ class TransE(MateModel):
              filter_out=False):
         if filter_out and self.ans is None:
             self.ans = dps.get_answer(torch.cat([self.data.train, self.data.valid, self.data.test], dim=0),
-                                 self.data.num_entity, self.data.num_relation)
+                                      self.data.num_entity, self.data.num_relation)
         if metric_list is None:
             metric_list = ['hits@1', 'hits@3', 'hits@10', 'hits@100', 'mr', 'mrr']
         if dataset == 'valid':
@@ -61,18 +61,19 @@ class TransE(MateModel):
 
         rank_list = []
         rank_list_filter = []
-        for batch_index in tqdm(range(total_batch)):
-            batch = next(data)
-            with torch.no_grad():
-                hr = self.model.get_entity_embedding(batch[:, 0]) + self.model.get_relation_embedding(batch[:, 1])
-                t = self.model.get_entity_embedding(torch.LongTensor(range(self.data.num_entity)).to(hr.device))
-                score = -((hr.unsqueeze(1) - t.unsqueeze(0)).norm(p=self.model.p_norm, dim=-1))
-                rank = mtc.calculate_rank(score, batch[:, 1])
-                rank_list.append(rank)
-                if filter_out:
-                    score = dps.filter_score(score, self.ans, batch, self.data.num_relation)
-                    rank = mtc.calculate_rank(score, batch[:, 2])
-                    rank_list_filter.append(rank)
+        with torch.no_grad():
+            for batch_index in tqdm(range(total_batch)):
+                batch = next(data)
+                with torch.no_grad():
+                    hr = self.model.get_entity_embedding(batch[:, 0]) + self.model.get_relation_embedding(batch[:, 1])
+                    t = self.model.get_entity_embedding(torch.LongTensor(range(self.data.num_entity)).to(hr.device))
+                    score = -((hr.unsqueeze(1) - t.unsqueeze(0)).norm(p=self.model.p_norm, dim=-1))
+                    rank = mtc.calculate_rank(score, batch[:, 1])
+                    rank_list.append(rank)
+                    if filter_out:
+                        score = dps.filter_score(score, self.ans, batch, self.data.num_relation)
+                        rank = mtc.calculate_rank(score, batch[:, 2])
+                        rank_list_filter.append(rank)
         all_rank = torch.cat(rank_list, dim=-1)
         metrics = mtc.ranks_to_metrics(metric_list=metric_list, ranks=all_rank)
         if filter_out:
