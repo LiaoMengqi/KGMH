@@ -3,6 +3,8 @@ import json
 import os
 import random
 import numpy as np
+import subprocess
+import re
 
 
 def load_data(file: str,
@@ -87,3 +89,45 @@ def set_default_fp(fp: str):
         torch.set_default_dtype(torch.float64)
     else:
         torch.set_default_dtype(torch.float32)
+
+
+def select_gpu():
+    try:
+        nvidia_info = subprocess.run(
+            'nvidia-smi', stdout=subprocess.PIPE).stdout.decode()
+    except UnicodeDecodeError:
+        nvidia_info = subprocess.run(
+            'nvidia-smi', stdout=subprocess.PIPE).stdout.decode("gbk")
+    used_list = re.compile(r"(\d+)MiB\s+/\s+\d+MiB").findall(nvidia_info)
+    used = [(idx, int(num)) for idx, num in enumerate(used_list)]
+    sorted_used = sorted(used, key=lambda x: x[1])
+    return sorted_used[0][0]
+
+
+def set_device(gpu):
+    if gpu != -1:
+        # use gpu
+        if not torch.cuda.is_available():
+            # gpu not available
+            print('No GPU available. Using CPU.')
+            device = 'cpu'
+        else:
+            # gpu available
+            if gpu < -1:
+                # auto select gpu
+                gpu_id = select_gpu()
+                print('Auto select gpu:%d' % gpu_id)
+                device = 'cuda:%d' % gpu_id
+            else:
+                # specify gpu id
+                if gpu >= torch.cuda.device_count():
+                    gpu_id = select_gpu()
+                    print('GPU id is invalid. Auto select gpu:%d' % gpu_id)
+                    device = 'cuda:%d' % gpu_id
+                else:
+                    print('Using gpu:%d' % gpu)
+                    device = 'cuda:%d' % gpu
+    else:
+        print('Using CPU.')
+        device = 'cpu'
+    return device

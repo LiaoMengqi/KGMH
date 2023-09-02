@@ -1,6 +1,7 @@
 # KGTL
 # 最新更新
 本方法库将长期进行维护与更新。
+- 2023-09-02：支持自动选择显存最多的GPU，设置`--gpu -1` 来使用CPU，也可以通过指定GPU号来指定GPU`--gpu 0`
 - 2023-08-31：修复CENET的小错误，新增静态模型RGCN
 - 2023-08-26：可以通过`--monitor`选择早停监控的指标；采取过滤时，早停指标也改为过滤后的指标
 - 2023-08-19：优化指标计算过程的性能，速度快了很多，在gup上训练时，大多数模型可以在1秒内完成评估
@@ -53,7 +54,7 @@ python main.py --dataset ICEWS14s --model cygnet --batch-size 256
 # --lr 学习率，默认1e-3
 python main.py --dataset ICEWS14s --model cygnet --lr 1e-5
 
-# --gpu 选取gpu号（单gpu只能指定为0），默认使用cpu
+# --gpu 选取gpu号（单gpu只能指定为0），默认自动选择显存占用最低的gpu
 python main.py --dataset ICEWS14s --model cygnet --gpu 0
 
 # --early-stop 早停轮数，默认不采取早停

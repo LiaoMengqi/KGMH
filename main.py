@@ -3,6 +3,7 @@ from model_handle import *
 from utils.func import save_json
 from utils.func import set_seed
 from utils.func import set_default_fp
+from utils.func import set_device
 from utils.optm import get_optimizer
 import time
 
@@ -10,6 +11,7 @@ import time
 def train(model, epochs, batch_size, step, early_stop, monitor, filter_out=False, plot=False):
     """
     train model
+    :param monitor:
     :param plot:
     :param filter_out:
     :param early_stop:
@@ -118,14 +120,8 @@ def main(args):
     # set floating point precision
     set_default_fp(args.fp)
     model_handle = ModelHandle(args.model)
-    # choose device
-    if args.gpu != -1:
-        if not torch.cuda.is_available() or args.gpu >= torch.cuda.device_count():
-            device = 'cpu'
-        else:
-            device = 'cuda:%d' % args.gpu
-    else:
-        device = 'cpu'
+    # set device
+    device = set_device(args.gpu)
     # load checkpoint
     if args.checkpoint is not None:
         model = load_checkpoint(args.checkpoint, model_handle, args, device)
@@ -205,9 +201,12 @@ if __name__ == '__main__':
                         help="evaluate model on test set, and notice that you must load a checkpoint for this.")
     # other
     parser.add_argument("--fp", type=str, default='fp32',
-                        help="floating point precision (fp16, bf16, fp32 or fp64) ")
-    parser.add_argument("--gpu", type=int, default=-1,
-                        help="use GPU.")
+                        help="Floating point precision (fp16, bf16, fp32 or fp64) ")
+    parser.add_argument("--gpu", type=int, default=0,
+                        help="Use the GPU with the lowest memory footprint by default. "
+                             "Specify a GPU by setting this parameter to a GPU id which equal to or greater than 0."
+                             "Set this parameter to -1 to use the CPU."
+                        )
     parser.add_argument("--seed", type=int, default=0,
                         help="random seed.")
     args_parsed = parser.parse_args()
