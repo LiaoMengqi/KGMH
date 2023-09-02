@@ -1,11 +1,7 @@
 import argparse
-from model_handle import *
-from utils.func import save_json
-from utils.func import set_seed
-from utils.func import set_default_fp
-from utils.func import set_device
-from utils.optm import get_optimizer
 import time
+
+from model_handle import *
 
 
 def train(model, epochs, batch_size, step, early_stop, monitor, filter_out=False, plot=False):
@@ -69,6 +65,7 @@ def train(model, epochs, batch_size, step, early_stop, monitor, filter_out=False
     for key in sorted(metric_history.keys()):
         print(key, ' ', metric_history[key][best], ' |', end='')
     print()
+    path = './checkpoint/' + model.name + '/' + model_id + '/'
     if plot:
         # plot loss and metrics
         from utils.plot import hist_value
@@ -76,23 +73,26 @@ def train(model, epochs, batch_size, step, early_stop, monitor, filter_out=False
                     'hits@3': metric_history['hits@3'],
                     'hits@10': metric_history['hits@10'],
                     'hits@100': metric_history['hits@100']},
-                   value='hits@k',
-                   name=model_id + '_valid_hits@k')
+                   path=path,
+                   metric_name='hits@k',
+                   name=model_id + 'valid_hits@k')
         hist_value({'mr': metric_history['mr']},
-                   value='mr',
-                   name=model_id + '_valid_mr')
+                   path=path,
+                   metric_name='mr',
+                   name=model_id + 'valid_mr')
         hist_value({'mrr': metric_history['mrr']},
-                   value='mrr',
-                   name=model_id + '_valid_mrr')
+                   path=path,
+                   metric_name='mrr',
+                   name=model_id + 'valid_mrr')
         hist_value({'loss': loss_history},
-                   value='loss',
-                   name=model_id + '_valid_loss')
+                   path=path,
+                   metric_name='loss',
+                   name=model_id + 'train_loss')
     # save train history
     data_to_save = metric_history
     data_to_save['loss'] = loss_history
     data_to_save['train_time'] = train_time
     data_to_save['evaluate_time'] = evaluate_time
-    path = './checkpoint/' + model.name + '/' + model_id + '/'
     save_json(data_to_save, name='train_history', path=path)
     print('model (checkpoint) id : ' + model_id)
 

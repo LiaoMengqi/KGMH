@@ -1,7 +1,4 @@
-import os
-import torch
-from utils.func import save_json, load_json
-from utils.optm import get_optimizer
+from utils.func import *
 from data.data_loader import DataLoader
 
 
