@@ -172,7 +172,7 @@ class CeNet(MateModel):
                     ranks = mtc.calculate_rank(score, batch[:, 2])
                     rank_list.append(ranks)
                     if filter_out:
-                        ans = utils.data_process.get_answer(batch, self.data.num_entity, self.data.num_relation * 2)
+                        ans = utils.data_process.get_answer(data[i], self.data.num_entity, self.data.num_relation * 2)
                         score = utils.data_process.filter_score(score, ans, batch, self.data.num_relation * 2)
                         rank = mtc.calculate_rank(score, batch[:, 2])
                         rank_list_filter.append(rank)
