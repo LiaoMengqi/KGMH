@@ -4,9 +4,10 @@ import time
 from model_handle import *
 
 
-def train(model, epochs, batch_size, step, early_stop, monitor, filter_out=False, plot=False):
+def train(model, epochs, batch_size, test_batch_size, step, early_stop, monitor, filter_out=False, plot=False):
     """
     train model
+    :param test_batch_size:
     :param monitor:
     :param plot:
     :param filter_out:
@@ -35,7 +36,7 @@ def train(model, epochs, batch_size, step, early_stop, monitor, filter_out=False
         print('epoch: %d |loss: %f |time: %fs' % (epoch + 1, loss, time_end - time_start))
         if (epoch + 1) % step == 0:
             time_start = time.time()
-            metrics = model.test(batch_size=batch_size, filter_out=filter_out)
+            metrics = model.test(batch_size=test_batch_size, filter_out=filter_out)
             time_end = time.time()
             evaluate_time.append(time_end - time_start)
 
@@ -141,15 +142,20 @@ def main(args):
         model = model_handle.Model(base_model, data, opt)
         model.to(device)
 
+    test_batch_size = args.batch_size
+    if args.test_batch_size is not None:
+        test_batch_size = args.test_batch_size
+
     if args.test:
         # evaluate
         model_id = args.checkpoint
         if args.checkpoint is None:
             raise Exception("You need to load a checkpoint for testing!")
-        evaluate(model, args.batch_size, model_id=model_id, filter_out=args.filter)
+        evaluate(model, test_batch_size, model_id=model_id, filter_out=args.filter)
     else:
         # train
-        train(model, args.epoch, args.batch_size, args.eva_step, args.early_stop, args.monitor, filter_out=args.filter,
+        train(model, args.epoch, args.batch_size, test_batch_size, args.eva_step, args.early_stop, args.monitor,
+              filter_out=args.filter,
               plot=args.plot)
 
 
@@ -187,7 +193,9 @@ if __name__ == '__main__':
     parser.add_argument("--epoch", type=int, default=30,
                         help="learning rate")
     parser.add_argument("--batch-size", type=int, default=1024,
-                        help="batch size.")
+                        help="batch size for training.")
+    parser.add_argument("--test-batch-size", type=int, default=None,
+                        help="batch size for test.")
     parser.add_argument("--eva-step", type=int, default=1,
                         help="evaluate model on valid set after 'eva-step' step of training.")
     parser.add_argument("--early-stop", type=int, default=0,
@@ -202,7 +210,7 @@ if __name__ == '__main__':
     # other
     parser.add_argument("--fp", type=str, default='fp32',
                         help="Floating point precision (fp16, bf16, fp32 or fp64) ")
-    parser.add_argument("--gpu", type=int, default=0,
+    parser.add_argument("--gpu", type=int, default=-2,
                         help="Use the GPU with the lowest memory footprint by default. "
                              "Specify a GPU by setting this parameter to a GPU id which equal to or greater than 0."
                              "Set this parameter to -1 to use the CPU."

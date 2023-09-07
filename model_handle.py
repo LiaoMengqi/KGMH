@@ -9,7 +9,7 @@ class ModelHandle:
 
     @staticmethod
     def get_type(model_name):
-        if model_name in ['transe', 'rgcn', 'sacn', 'distmilt', 'gcn']:
+        if model_name in ['transe', 'rgcn', 'sacn', 'distmult', 'gcn']:
             return 'static'
         elif model_name in ['cygnet', 'regcn', 'cen', 'cenet']:
             return 'temporal/extrapolation'
@@ -37,7 +37,9 @@ class ModelHandle:
         elif model == 'rgcn':
             from base_models.rgcn_base import RGCNBase as BaseModel
             from models.rgcn import RGCN as Model
-
+        elif model == 'distmult':
+            from base_models.distmult_base import DistMultBase as BaseModel
+            from models.distmult import DistMult as Model
         else:
             raise Exception('Model error!')
         return BaseModel, Model
@@ -103,6 +105,11 @@ class ModelHandle:
                     int, "num_block"],
                 ["input dropout probability of self-loop (float ,[0,1)):", float, "dropout_s"],
                 ["input dropout probability of non-self-loop (float ,[0,1)):", float, "dropout_o"]
+            ]
+        elif self.model == 'distmult':
+            hints = [
+                ["input the input dimension (int,  >0):", int, 'input_dim'],
+                ["input the output dimension (int,  >0):", int, 'output_dim']
             ]
         else:
             raise Exception
@@ -187,16 +194,25 @@ class ModelHandle:
             )
         elif self.model == 'rgcn':
             base_model = self.BaseModel(
-                dim_list=[50, 50, 50],
+                dim_list=[64, 64],
                 num_relation=data.num_relation if default else config['num_relation'],
                 num_entity=data.num_entity if default else config['num_entity'],
-                use_basis=False if default else config['use_basis'],
-                num_basis=10 if default else config['num_basis'],
+                use_basis=True if default else config['use_basis'],
+                num_basis=2 if default else config['num_basis'],
                 use_block=False if default else config['use_block'],
                 num_block=10 if default else config['num_block'],
                 dropout_s=0 if default else config['dropout_s'],
-                dropout_o=0 if default else config['dropout_o']
+                dropout_o=0 if default else config['dropout_o'],
+                inverse=True if default else config['inverse']
             )
+        elif self.model == 'distmult':
+            base_model = self.BaseModel(
+                num_entity=data.num_entity if default else config['num_entity'],
+                num_relation=data.num_relation if default else config['num_relation'],
+                input_dim=50 if default else config['input_dim'],
+                output_dim=50 if default else config['output_dim']
+            )
+            pass
         else:
             raise Exception('model not exist!')
         return base_model

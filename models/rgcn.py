@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
-import numpy as np
+
 
 from base_models.rgcn_base import RGCNBase
 from data.data_loader import DataLoader
-from base_models.distmilt_base import DistMult
+from base_models.distmult_base import DistMultDecoder
 from utils.data_process import generate_negative_sample
 import utils.data_process as dps
 from tqdm import tqdm
@@ -23,9 +23,11 @@ class RGCN(MateModel):
         self.data = data
         self.opt = opt
         self.name = 'rgcn'
-
-        self.dist_mult = DistMult(self.model.num_relation, self.model.dims[-1])
+        # decoder
+        num_rela_expand = self.model.num_relation * 2 if self.model.inverse else self.model.num_relation
+        self.dist_mult = DistMultDecoder(num_rela_expand, self.model.dims[-1])
         self.opt.add_param_group({'params': self.dist_mult.parameters()})
+
         self.cross_entropy = nn.CrossEntropyLoss(reduction='sum')
         self.ans = None
 
@@ -33,7 +35,10 @@ class RGCN(MateModel):
                     batch_size=128):
         self.train()
         self.opt.zero_grad()
-        edge = self.data.train
+        if self.model.inverse:
+            edge = dps.add_inverse(self.data.train, self.model.num_relation)
+        else:
+            edge = self.data.train
         total_loss = 0
         # generate negative edge
         nag_edge = generate_negative_sample(edge, self.model.num_entity)
@@ -67,19 +72,26 @@ class RGCN(MateModel):
             metric_list = ['hits@1', 'hits@3', 'hits@10', 'hits@100', 'mr', 'mrr']
 
         if dataset == 'valid':
-            data_batched = dps.batch_data(self.data.valid, batch_size)
-            total_batch = int(len(self.data.valid) / batch_size) + (len(self.data.valid) % batch_size != 0)
+            data = self.data.valid
         elif dataset == 'test':
-            data_batched = dps.batch_data(self.data.test, batch_size)
-            total_batch = int(len(self.data.test) / batch_size) + (len(self.data.test) % batch_size != 0)
+            data = self.data.test
         else:
             raise Exception('dataset ' + dataset + ' is not defined!')
+        if self.model.inverse:
+            data = dps.add_inverse(data, self.model.num_relation)
+        data_batched = dps.batch_data(data, batch_size)
+        total_batch = int(len(data) / batch_size) + (len(data) % batch_size != 0)
 
         rank_list = []
         rank_list_filter = []
         self.eval()
         with torch.no_grad():
-            h = self.model.forward(self.data.train)
+
+            if self.model.inverse:
+                h = self.model.forward(dps.add_inverse(self.data.train, self.model.num_relation))
+            else:
+                h = self.model.forward(self.data.train)
+
             for batch_index in tqdm(range(total_batch)):
                 batch = next(data_batched)
                 sr = batch[:, :2]

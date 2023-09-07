@@ -8,13 +8,14 @@ class RGCNBase(nn.Module):
     def __init__(self,
                  dim_list: list,
                  num_relation: int,
-                 num_entity=None,
+                 num_entity: int,
                  use_basis=False,
                  num_basis=10,
                  use_block=False,
                  num_block=10,
                  dropout_s=0,
-                 dropout_o=0
+                 dropout_o=0,
+                 inverse=True
                  ):
         super(RGCNBase, self).__init__()
         self.layers = nn.ModuleList()
@@ -22,10 +23,12 @@ class RGCNBase(nn.Module):
         self.dims = dim_list
         if len(dim_list) < 2:
             raise Exception('At least have two dimension!')
+        self.inverse = inverse
+        num_rela_expand = self.num_relation * 2 if self.inverse else self.num_relation
         for i in range(len(dim_list) - 1):
             self.layers.append(RGCNLayer(dim_list[i],
                                          dim_list[i + 1],
-                                         num_relation,
+                                         num_rela_expand,
                                          use_basis=use_basis,
                                          num_basis=num_basis,
                                          use_block=use_block,

@@ -1,27 +1,23 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-import re
-from tqdm import tqdm
-
-from base_models.transe_base import TransEBase
-import utils.data_process as dps
-from data.data_loader import DataLoader
-import utils.metrics as mtc
+from base_models.distmult_base import DistMultBase
 from models.mate_model import MateModel
+from data.data_loader import DataLoader
+import utils.data_process as dps
+import utils.metrics as mtc
+
+from tqdm import tqdm
+import torch
 
 
-class TransE(MateModel):
-    def __init__(self,
-                 model: TransEBase,
-                 data: DataLoader,
-                 opt: torch.optim.Optimizer):
-        super(TransE, self).__init__()
+class DistMult(MateModel):
+    def __init__(self, model: DistMultBase, data: DataLoader, opt: torch.optim.Optimizer):
+        super(DistMult, self).__init__()
+        super().__init__()
         self.model = model
         self.data = data
         self.opt = opt
-        self.name = 'transe'
+        self.name = 'distmult'
+
+        # for filter
         self.ans = None
 
     def train_epoch(self,
@@ -34,17 +30,26 @@ class TransE(MateModel):
         for batch_index in tqdm(range(total_batch)):
             batch = next(data_batched)
             neg_sample = dps.generate_negative_sample(batch, self.data.num_entity)
-            loss = self.loss(batch, neg_sample)
+            pos_score = self.model(batch[:, 0], batch[:, 1], batch[:, 2])
+            neg_score = self.model(neg_sample[:, 0], neg_sample[:, 1], neg_sample[:, 2])
+            loss = self.loss(pos_score, neg_score)
             loss.backward()
             self.opt.step()
             total_loss += float(loss)
         return total_loss / total_batch
 
-    def test(self,
-             batch_size=128,
-             dataset='valid',
-             metric_list=None,
-             filter_out=False):
+    def loss(self,
+             pos_score,
+             neg_score):
+        return torch.nn.functional.relu(1 - pos_score + neg_score).mean()
+
+    def predict(self, query):
+        y_h = self.model.encoder.linear(self.model.encoder.entity_embed(query[:, 0]))
+        y_t = self.model.encoder.linear(self.model.encoder.entity_embed.weight)
+        score = torch.sum((y_h * self.model.decoder.diag[query[:, 1]]).unsqueeze(1) * y_t.unsqueeze(0), dim=-1)
+        return score
+
+    def test(self, batch_size=128, dataset='valid', metric_list=None, filter_out=False):
         if filter_out and self.ans is None:
             self.ans = dps.get_answer(torch.cat([self.data.train, self.data.valid, self.data.test], dim=0),
                                       self.data.num_entity, self.data.num_relation)
@@ -65,9 +70,7 @@ class TransE(MateModel):
             for batch_index in tqdm(range(total_batch)):
                 batch = next(data)
                 with torch.no_grad():
-                    hr = self.model.get_entity_embedding(batch[:, 0]) + self.model.get_relation_embedding(batch[:, 1])
-                    t = self.model.get_entity_embedding(torch.LongTensor(range(self.data.num_entity)).to(hr.device))
-                    score = -((hr.unsqueeze(1) - t.unsqueeze(0)).norm(p=self.model.p_norm, dim=-1))
+                    score = self.predict(batch[:, :2])
                     rank = mtc.calculate_rank(score, batch[:, 2])
                     rank_list.append(rank)
                     if filter_out:
@@ -82,43 +85,12 @@ class TransE(MateModel):
             metrics.update(metrics_filter)
         return metrics
 
-    def loss(self,
-             pos_edge,
-             nag_edge):
-        # self.model.norm_weight()
-        pos_dis = self.model(pos_edge)
-        nag_dis = self.model(nag_edge)
-        """loss = (torch.max(pos_dis - nag_dis,
-                          -torch.Tensor([self.model.margin]).cuda())).mean()  # + self.margin"""
-        loss = F.relu(self.model.margin + pos_dis - nag_dis).mean()
-        # margin = -torch.Tensor([self.model.margin, ]).to(pos_dis.device)
-        # loss = (torch.max(pos_dis - nag_dis, margin)).mean()
-        # scale loss
-        scale_loss = 0
-        if self.model.c_r != 0:
-            relation = torch.cat([pos_edge[:, 1], nag_edge[:, 1]])
-            rela_scale_loss = self.scale_loss(self.model.relation_embedding(relation))
-            scale_loss = scale_loss + self.model.c_r * rela_scale_loss
-        if self.model.c_e != 0:
-            entity = torch.cat([pos_edge[:, 0], pos_edge[:, 2], nag_edge[:, 0], nag_edge[:, 2]])
-            entity_scale_loss = self.scale_loss(self.model.entity_embedding(entity))
-            scale_loss = scale_loss + self.model.c_e * entity_scale_loss
-        # compose loss
-        loss = loss + scale_loss
-        return loss
-
-    def scale_loss(self, embed):
-        return F.relu(embed.norm(p=2, dim=-1) - 1).mean()
-
     def get_config(self):
         config = {}
         config['model'] = self.name
         config['dataset'] = self.data.dataset
         config['num_entity'] = self.model.num_entity
         config['num_relation'] = self.model.num_relation
-        config['emb_dim'] = self.model.emb_dim
-        config['margin'] = self.model.margin
-        config['p_norm'] = self.model.p_norm
-        config['c_e'] = self.model.c_e
-        config['c_r'] = self.model.c_r
+        config['input_dim'] = self.model.input_dim
+        config['output_dim'] = self.model.output_dim
         return config

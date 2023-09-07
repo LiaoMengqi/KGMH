@@ -65,14 +65,13 @@ class RGCNLayer(nn.Module):
             std = gain * math.sqrt(2 / (self.input_dim + self.output_dim))
             nn.init.normal_(self.weight, std=std, mean=0)
 
-    def get_relation_weight(self,
-                            index: torch.Tensor) -> torch.Tensor:
+    def get_relation_weight(self) -> torch.Tensor:
         if self.use_basis:
-            res = torch.einsum('kx,xnm->knm', self.weight[index], self.v_weight)
+            res = torch.einsum('kx,xnm->knm', self.weight, self.v_weight)
         elif self.use_block:
-            res = self.b_weight[index]
+            res = self.b_weight
         else:
-            res = self.weight[index]
+            res = self.weight
         return res
 
     @staticmethod
@@ -101,10 +100,10 @@ class RGCNLayer(nn.Module):
         if self.use_block:
             msg = torch.matmul(
                 input_h[src].view(-1, self.num_block, self.input_dim // self.num_block).unsqueeze(2),
-                self.get_relation_weight(rel)
+                self.get_relation_weight()[rel]
             ).view(-1, self.output_dim)
         else:
-            msg = torch.bmm(input_h[src].unsqueeze(1), self.get_relation_weight(rel)).squeeze(1)
+            msg = torch.bmm(input_h[src].unsqueeze(1), self.get_relation_weight()[rel]).squeeze(1)
         # dropout
         msg = self.dropout_o(msg)
         # aggregate message
