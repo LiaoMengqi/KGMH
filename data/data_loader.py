@@ -58,7 +58,7 @@ class DataLoader(object):
 
         file = self.path + '/' + self.dataset + '/entity2id.txt'
         self.entity2id = load_dict(file)
-        self.id2entity = reverse_dict(self.id2entity)
+        self.id2entity = reverse_dict(self.entity2id)
         self.num_entity = len(self.entity2id)
 
     def to(self,
