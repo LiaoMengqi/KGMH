@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
-import numpy as np
 
 from base_models.cenet_base import CeNetBase
 from data.data_loader import DataLoader

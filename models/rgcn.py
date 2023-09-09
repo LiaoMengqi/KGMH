@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-
 from base_models.rgcn_base import RGCNBase
 from data.data_loader import DataLoader
 from base_models.distmult_base import DistMultDecoder
@@ -100,7 +99,7 @@ class RGCN(MateModel):
                 sr = sr.unsqueeze(1).expand(-1, h.shape[0], 2)
                 edges = torch.cat((sr, obj), dim=2)
                 score = self.dist_mult(h[edges[:, :, 0]], h[edges[:, :, 2]], edges[:, :, 1])
-                rank = mtc.calculate_rank(score, batch[:, 1])
+                rank = mtc.calculate_rank(score, batch[:, 2])
                 rank_list.append(rank)
                 if filter_out:
                     score = dps.filter_score(score, self.ans, batch, self.data.num_relation)
@@ -133,13 +132,15 @@ class RGCN(MateModel):
 
     def get_config(self):
         config = {}
-        config['model'] = 'rgcn'
+        config['model'] = self.name
+        config['dataset'] = self.data.dataset
+        config['dim_list'] = self.model.dims
         config['num_relation'] = self.data.num_relation
         config['num_entity'] = self.data.num_entity
-        config['use_basis'] = True,
-        config['num_basis'] = 10,
-        config['use_block'] = False,
-        config['num_block'] = 10,
-        config['dropout_s'] = 0,
-        config['dropout_o'] = 0
+        config['use_basis'] = self.model.use_basis
+        config['num_basis'] = self.model.num_basis
+        config['use_block'] = self.model.use_block
+        config['num_block'] = self.model.num_block
+        config['dropout_s'] = self.model.dropout_s
+        config['dropout_o'] = self.model.dropout_o
         return config

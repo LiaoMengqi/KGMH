@@ -40,6 +40,9 @@ class ModelHandle:
         elif model == 'distmult':
             from base_models.distmult_base import DistMultBase as BaseModel
             from models.distmult import DistMult as Model
+        elif model == 'sacn':
+            from base_models.sacn_base import SACNBase as BaseModel
+            from models.sacn import SACN as Model
         else:
             raise Exception('Model error!')
         return BaseModel, Model
@@ -110,6 +113,14 @@ class ModelHandle:
             hints = [
                 ["input the input dimension (int,  >0):", int, 'input_dim'],
                 ["input the output dimension (int,  >0):", int, 'output_dim']
+            ]
+        elif self.model == 'sacn':
+            hints = [
+                ["input the input dimension (int,  >0):", int, 'input_dim'],
+                ["input the number of WGCN layers (int,  >0):", int, 'num_layer'],
+                ["input the number of channels (int, >0):", int, "num_channel"],
+                ["input the length of convolution kernel (int, >0)", int, "kernel_length"],
+                ["input dropout probability (float ,[0,1)):", float, "dropout"]
             ]
         else:
             raise Exception
@@ -194,7 +205,7 @@ class ModelHandle:
             )
         elif self.model == 'rgcn':
             base_model = self.BaseModel(
-                dim_list=[64, 64],
+                dims=[64, 64],
                 num_relation=data.num_relation if default else config['num_relation'],
                 num_entity=data.num_entity if default else config['num_entity'],
                 use_basis=True if default else config['use_basis'],
@@ -203,7 +214,7 @@ class ModelHandle:
                 num_block=10 if default else config['num_block'],
                 dropout_s=0 if default else config['dropout_s'],
                 dropout_o=0 if default else config['dropout_o'],
-                inverse=True if default else config['inverse']
+                inverse=False if default else config['inverse']
             )
         elif self.model == 'distmult':
             base_model = self.BaseModel(
@@ -212,7 +223,16 @@ class ModelHandle:
                 input_dim=50 if default else config['input_dim'],
                 output_dim=50 if default else config['output_dim']
             )
-            pass
+        elif self.model == 'sacn':
+            base_model = self.BaseModel(
+                num_entity=data.num_entity if default else config['num_entity'],
+                num_relation=data.num_relation if default else config['num_relation'],
+                dim=200 if default else config['dim'],
+                num_layer=2 if default else config['num_layer'],
+                num_channel=100 if default else config['num_channel'],
+                kernel_length=3 if default else config['kernel_length'],
+                dropout=0.2 if default else config['dropout'],
+            )
         else:
             raise Exception('model not exist!')
         return base_model

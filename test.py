@@ -1,18 +1,20 @@
 import torch
 
+from base_models.sacn_base import SACNBase
+from models.sacn import SACN
 from data.data_loader import DataLoader
-from base_models.distmult_base import DistMultBase
-import utils.data_process as dps
 
-data = DataLoader(dataset='FB15k-237', root_path='./data/', type='static')
+dim = 32
+
+data = DataLoader(dataset='FB15k', root_path='./data/', type='static')
 data.load()
 
-model = DistMultBase(data.num_entity, data.num_relation, 32, 32)
+base_model = SACNBase(data.num_entity, data.num_relation, dim, num_layer=2, num_channel=50,
+                      kernel_length=3, dropout=0.2)
+opt = torch.optim.Adam(base_model.parameters(), lr=1e-3)
+model = SACN(base_model, data, opt)
 
-sub = torch.LongTensor([1, 2, 3])
-rela = torch.LongTensor([5, 1, 2])
-obj = torch.LongTensor([0, 9, 14])
-
-res = model.forward(sub, rela, obj)
-res.sum().backward()
-print(res)
+loss = model.train_epoch(batch_size=2048)
+print(loss)
+met = model.test(batch_size=1024)
+print(met)

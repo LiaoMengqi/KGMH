@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 class RGCNBase(nn.Module):
     def __init__(self,
-                 dim_list: list,
+                 dims: list,
                  num_relation: int,
                  num_entity: int,
                  use_basis=False,
@@ -18,16 +18,25 @@ class RGCNBase(nn.Module):
                  inverse=True
                  ):
         super(RGCNBase, self).__init__()
-        self.layers = nn.ModuleList()
+        self.dims = dims
         self.num_relation = num_relation
-        self.dims = dim_list
-        if len(dim_list) < 2:
+        self.num_entity = num_entity
+        self.use_basis = use_basis
+        self.num_basis = num_basis
+        self.use_block = use_block
+        self.num_block = num_block
+        self.dropout_s = dropout_s
+        self.dropout_o = dropout_o
+        self.inverse = inverse
+
+        self.layers = nn.ModuleList()
+        if len(dims) < 2:
             raise Exception('At least have two dimension!')
         self.inverse = inverse
         num_rela_expand = self.num_relation * 2 if self.inverse else self.num_relation
-        for i in range(len(dim_list) - 1):
-            self.layers.append(RGCNLayer(dim_list[i],
-                                         dim_list[i + 1],
+        for i in range(len(dims) - 1):
+            self.layers.append(RGCNLayer(dims[i],
+                                         dims[i + 1],
                                          num_rela_expand,
                                          use_basis=use_basis,
                                          num_basis=num_basis,
@@ -38,9 +47,8 @@ class RGCNBase(nn.Module):
                                          )
                                )
 
-        self.num_layer = len(dim_list) - 1
-        self.num_entity = num_entity
-        self.entity_embed = nn.Embedding(num_entity, embedding_dim=dim_list[0])
+        self.num_layer = len(dims) - 1
+        self.entity_embed = nn.Embedding(num_entity, embedding_dim=dims[0])
         self.wight_init()
 
     def wight_init(self):

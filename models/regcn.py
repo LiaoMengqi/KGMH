@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from base_models.regcn_base import REGCNBase
 from data.data_loader import DataLoader
-from base_models.sacn_base import ConvTransEBase
+from base_models.sacn_base import ConvTransEDecoder
 import random
 import utils.data_process as dps
 from tqdm import tqdm
@@ -10,6 +10,7 @@ import utils.metrics as mtc
 import numpy as np
 import utils
 from models.mate_model import MateModel
+
 
 class REGCN(MateModel):
     def __init__(self, model: REGCNBase,
@@ -31,13 +32,13 @@ class REGCN(MateModel):
         self.grad_norm = 1.0
 
         self.cross_entropy_loss = nn.CrossEntropyLoss()
-        self.decoder = ConvTransEBase(model.hidden_dim,
-                                      num_channel=50,
-                                      kernel_length=3)
+        self.decoder = ConvTransEDecoder(model.hidden_dim,
+                                         num_channel=50,
+                                         kernel_length=3)
         self.opt.add_param_group({'params': self.decoder.parameters()})
 
     def train_epoch(self, batch_size=512):
-        self.model.train()
+        self.train()
         self.opt.zero_grad()
         # add reverse relation to graph
         data = dps.add_reverse_relation(self.train_data, self.data.num_relation)
@@ -90,10 +91,11 @@ class REGCN(MateModel):
                                                self.data.num_relation)
         rank_list = []
         rank_list_filter = []
+        self.eval()
         with torch.no_grad():
-            evolved_entity_embed, evolved_relation_embed = self.model.forward(history, training=False)
+            evolved_entity_embed, evolved_relation_embed = self.model.forward(history)
             for edge in tqdm(data):
-                score = self.decoder(evolved_entity_embed, evolved_relation_embed, edge[:, [0, 1]], training=False)
+                score = self.decoder(evolved_entity_embed, evolved_relation_embed, edge[:, [0, 1]])
                 ranks = mtc.calculate_rank(score, edge[:, 2])
                 rank_list.append(ranks)
                 if filter_out:

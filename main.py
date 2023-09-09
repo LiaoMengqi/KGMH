@@ -184,6 +184,10 @@ if __name__ == '__main__':
                         help="optimizer parameter")
     parser.add_argument("--eps", type=float, default=1e-8,
                         help="optimizer parameter")
+    parser.add_argument("--beta1", type=float, default=0.9,
+                        help="computing running averages of gradient")
+    parser.add_argument("--beta2", type=float, default=0.999,
+                        help="decay factor of the squared gradient")
     parser.add_argument("--amsgrad", action='store_true', default=False,
                         help="Adam optimizer parameter")
     parser.add_argument("--grad-norm", type=float, default=1.0,

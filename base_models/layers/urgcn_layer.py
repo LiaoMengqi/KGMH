@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from base_models.layers.rgcn_layer import RGCNLayer
+from base_models.layers.gnn import GNN
 import torch.nn.functional as F
 
 
@@ -40,12 +40,11 @@ class URGCNLayer(nn.Module):
             nn.init.xavier_uniform_(self.w_self, gain=nn.init.calculate_gain('relu'))
             nn.init.xavier_uniform_(self.w_self_evolve, gain=nn.init.calculate_gain('relu'))
 
-    def forward(self, nodes_embed, relation_embed, edges, training=True):
+    def forward(self, nodes_embed, relation_embed, edges):
         """
         :param nodes_embed:Tensor, size=(num_node,input_dim)
         :param relation_embed: Tensor,size=(num_edge,input_dim)
         :param edges: Tensor, size=(num_edge, 3), with the format of (source node, edge, destination node)
-        :param training:
         :return: the representation of node after aggregation
         """
         # self loop message
@@ -59,7 +58,7 @@ class URGCNLayer(nn.Module):
         msg = torch.mm(nodes_embed[edges[:, 0]] + relation_embed[edges[:, 1]],
                        self.w_neighbor)
         # aggregate
-        agg_index, msg_agg = RGCNLayer.aggregate(msg, edges[:, 2])
+        agg_index, msg_agg = GNN.gcn_aggregate(msg, edges[:, 2])
         # send message
         new_nodes_embed = nodes_embed.clone()
         new_nodes_embed[agg_index] += msg_agg
@@ -67,6 +66,5 @@ class URGCNLayer(nn.Module):
             new_nodes_embed = new_nodes_embed + sl_msg
         if self.active:
             torch.relu_(new_nodes_embed)
-        if training:
-            new_nodes_embed = self.dropout(new_nodes_embed)
+        new_nodes_embed = self.dropout(new_nodes_embed)
         return new_nodes_embed

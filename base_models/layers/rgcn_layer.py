@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import math
+from base_models.layers.gnn import GNN
 
 
 class RGCNLayer(nn.Module):
@@ -74,18 +75,6 @@ class RGCNLayer(nn.Module):
             res = self.weight
         return res
 
-    @staticmethod
-    def aggregate(message,
-                  des):
-        des_unique, des_index, count = torch.unique(des, return_inverse=True, return_counts=True)
-        message = torch.zeros(des_unique.shape[0],
-                              message.shape[1],
-                              dtype=message.dtype,
-                              device=message.device).scatter_add_(0,
-                                                                  des_index.unsqueeze(1).expand_as(message),
-                                                                  message)
-        return des_unique, message / count.reshape(-1, 1)
-
     def forward(self,
                 input_h,
                 edges) -> torch.Tensor:
@@ -107,7 +96,7 @@ class RGCNLayer(nn.Module):
         # dropout
         msg = self.dropout_o(msg)
         # aggregate message
-        dst_index, msg = self.aggregate(msg, dst)
+        dst_index, msg = GNN.gcn_aggregate(msg, dst)
         # self-loop message
         if self.self_loop:
             h = torch.mm(input_h, self.self_loop_weigt)

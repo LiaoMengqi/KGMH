@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from base_models.sacn_base import ConvTransEBase
 from base_models.layers.urgcn_layer import URGCNLayer
 import torch.nn.functional as F
 
@@ -88,8 +87,7 @@ class REGCNBase(nn.Module):
         return F.normalize(tensor) if self.layer_norm else tensor
 
     def forward(self,
-                edges: list,
-                training=True):
+                edges: list):
         """
         get evolved relation embedding and entity embedding
         :param edges: a sequence of graph edges
@@ -116,8 +114,7 @@ class REGCNBase(nn.Module):
 
             current_entity_embed = self.rgcn.forward(evolved_entity_embed,
                                                      evolved_relation_embed,
-                                                     edge,
-                                                     training=training)
+                                                     edge)
             # normalize
             current_entity_embed = self.normalize(current_entity_embed)
             # update evolved entity embedding
@@ -149,9 +146,8 @@ class URGCNBase(nn.Module):
     def forward(self,
                 input_h,
                 relation_embed,
-                edges,
-                training=True):
+                edges):
         h = input_h
         for i in range(self.num_layer):
-            h = self.layers[i](h, relation_embed, edges, training)
+            h = self.layers[i](h, relation_embed, edges)
         return h

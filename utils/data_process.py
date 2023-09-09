@@ -247,3 +247,16 @@ def generate_shortest_path(triplets: torch.Tensor,
         path = bi_bfs(ad_matrix, s.item(), d.item())
         paths[(s.item(), d.item())] = path
     return paths
+
+
+def label_smooth(label, num_class, epsilon):
+    """
+
+    :param num_class:
+    :param label:label index
+    :return:
+    """
+    y = torch.zeros((label.shape[0], num_class), device=label.device)
+    y.scatter_(1, label.unsqueeze(1), 1)
+    y = (1.0 - epsilon) * y + (1.0 / num_class)
+    return y
