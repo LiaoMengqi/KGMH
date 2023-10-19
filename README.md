@@ -1,4 +1,4 @@
-# KGTL
+# KGMH
 
 # 最新更新
 
@@ -92,6 +92,9 @@ pyhton main.py --mldel  rgcn --dataset FB15k --early-stop 3 --filter
 
 # DistMult
 pyhton main.py --model distmult --dataset FB15k --early-stop 3 --filter --lr 1e-4
+
+# SACN
+pyhton main.py --model sacn --dataset FB15k --early-stop 5 --filter --lr 1e-4
 ```
 
 temporal

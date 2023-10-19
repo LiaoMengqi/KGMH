@@ -108,7 +108,7 @@ class CyGNet(MateModel):
         all_rank = torch.cat(rank_list)
         metrics = mtc.ranks_to_metrics(metric_list, all_rank)
         if filter_out:
-            all_rank = np.concatenate(rank_list_filter)
+            all_rank = torch.cat(rank_list_filter)
             metrics_filter = mtc.ranks_to_metrics(metric_list, all_rank, filter_out)
             metrics.update(metrics_filter)
         return metrics
