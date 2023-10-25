@@ -97,7 +97,7 @@ def filter_score(score: torch.Tensor,
                  data: torch.Tensor,
                  num_relation):
     i = data[:, 0] * num_relation + data[:, 1]
-    max_score = torch.max(score)
+    max_score = torch.max(torch.abs(score))
     mask = torch.index_select(ans, dim=0, index=i).to_dense()
     mask[range(len(mask)), data[:, 2]] = 0
     return score - mask * max_score
