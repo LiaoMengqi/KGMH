@@ -38,8 +38,8 @@ class SACNBase(nn.Module):
 class ConvTransEDecoder(nn.Module):
     def __init__(self,
                  input_dim,
-                 num_channel,
-                 kernel_length,
+                 num_channel=50,
+                 kernel_length=3,
                  dropout=0.0):
         super(ConvTransEDecoder, self).__init__()
         self.input_dim = input_dim

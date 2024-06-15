@@ -2,21 +2,24 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from base_models.layers.gcn_layer import GCNLayer
+from base_models.layers.compgcn_layer import CompGCNLayer
 
 
-class GCNBase(torch.nn.Module):
+class CompCNBase(torch.nn.Module):
     def __init__(self,
                  input_dim,
                  output_dim,
+                 num_rela,
                  hidden_dims=None):
-        super(GCNBase, self).__init__()
+        super(CompCNBase, self).__init__()
         self.layers = nn.ModuleList()
         if hidden_dims is None:
             hidden_dims = []
         all_dims = [input_dim] + hidden_dims + [output_dim]
         for i in range(len(all_dims) - 1):
-            self.layers.append(GCNLayer(all_dims[i], all_dims[i + 1]))
+            self.layers.append(CompGCNLayer(all_dims[i],
+                                            all_dims[i + 1],
+                                            num_rela))
         self.num_layer = len(all_dims) - 1
 
     def forward(self,

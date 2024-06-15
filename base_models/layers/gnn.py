@@ -35,3 +35,16 @@ class GNN:
         :return:
         """
         return torch.sparse.mm(adj, message)
+
+    @staticmethod
+    def edges2adj(edges, num_entity):
+        src, rela, dst = edges.transpose(0, 1)
+        i = torch.cat([src.unsqueeze(0), dst.unsqueeze(0)], dim=0)
+        v = torch.ones(edges.shape[0], device=edges.device)
+        adj = torch.sparse_coo_tensor(i, v, size=(num_entity, num_entity), device=edges.device)
+        return adj
+
+    @staticmethod
+    def cal_out_degree(adj):
+        out_dgr = torch.sparse.sum(adj, dim=-1)
+        return out_dgr

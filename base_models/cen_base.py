@@ -114,7 +114,7 @@ class KGSEncoder(nn.Module):
         entity_embed = self.normalize(entity_embed)
         relation_embed = self.normalize(relation_embed)
         for edge in edges:
-            current_embed = self.rgcn.forward(entity_embed, relation_embed, edge, training)
+            current_embed = self.rgcn.forward(entity_embed, relation_embed, edge)
             current_embed = self.normalize(current_embed)
             time_weight = F.sigmoid(torch.mm(entity_embed, self.time_gate_weight) + self.time_gate_bias)
             entity_embed = time_weight * current_embed + (1 - time_weight) * entity_embed

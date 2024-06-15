@@ -2,21 +2,26 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from base_models.layers.gcn_layer import GCNLayer
+from base_models.layers.gat_layer import GATLayer
 
 
-class GCNBase(torch.nn.Module):
+class GATBase(torch.nn.Module):
     def __init__(self,
                  input_dim,
                  output_dim,
+                 head_num=3,
+                 leakey_rate=1e-2,
                  hidden_dims=None):
-        super(GCNBase, self).__init__()
+        super(GATBase, self).__init__()
         self.layers = nn.ModuleList()
+        self.head_num = head_num
+        self.leakey_rate = leakey_rate
+
         if hidden_dims is None:
             hidden_dims = []
         all_dims = [input_dim] + hidden_dims + [output_dim]
         for i in range(len(all_dims) - 1):
-            self.layers.append(GCNLayer(all_dims[i], all_dims[i + 1]))
+            self.layers.append(GATLayer(all_dims[i], all_dims[i + 1], head_num, leakey_rate))
         self.num_layer = len(all_dims) - 1
 
     def forward(self,

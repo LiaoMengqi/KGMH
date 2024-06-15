@@ -3,11 +3,10 @@ import torch.nn as nn
 
 
 class CompGCNLayer(nn.Module):
-    def __init__(self, input_dim, output_dim, num_rela, dtype=torch.float):
+    def __init__(self, input_dim, output_dim, num_rela):
         super(CompGCNLayer, self).__init__()
         self.output_dim = output_dim
         self.num_rela = num_rela
-        self.dtype = dtype
         self.W_o = nn.Linear(input_dim, output_dim, bias=False)
         self.W_i = nn.Linear(input_dim, output_dim, bias=False)
         self.W_s = nn.Linear(input_dim, output_dim, bias=False)
@@ -29,7 +28,7 @@ class CompGCNLayer(nn.Module):
 
     def aggregate(self, message, des):
         des_unique, des_index = torch.unique(des, return_inverse=True)
-        message = torch.zeros(des_unique.shape[0], message.shape[1], dtype=self.dtype).scatter_add_(
+        message = torch.zeros(des_unique.shape[0], message.shape[1]).scatter_add_(
             0, des_index.unsqueeze(1).expand_as(message), message)
         return des_unique, message
 

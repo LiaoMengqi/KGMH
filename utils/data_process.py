@@ -67,6 +67,16 @@ def batch_data(data: torch.Tensor,
             yield data[b_index], label[b_index]
 
 
+def add_self_loop(edges, num_relation, num_entity, inverse=False):
+    i = torch.arange(0, num_entity, device=edges.device)
+    if inverse:
+        r = torch.LongTensor([num_relation] * num_entity).to(edges.device)
+    else:
+        r = torch.LongTensor([num_relation * 2] * num_entity).to(edges.device)
+    self_loop = torch.cat([i.unsqueeze(1), r.unsqueeze(1), i.unsqueeze(1)], dim=-1)
+    return torch.cat([edges, self_loop], dim=0)
+
+
 def add_inverse(edge: torch.Tensor,
                 num_relation):
     reverse = torch.cat([edge[:, 2].unsqueeze(1),

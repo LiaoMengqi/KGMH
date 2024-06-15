@@ -1,46 +1,38 @@
+from base_models.ggecddcd_base import GGEcdDcdBase
+from data.data_loader import DataLoader
+from models.mate_model import MateModel
+import utils.data_process as dps
+import utils.metrics as mtc
+
 import torch
+from tqdm import tqdm
 import torch.nn as nn
 
-from base_models.rgcn_base import RGCNBase
-from data.data_loader import DataLoader
-from base_models.distmult_base import DistMultDecoder
-from utils.data_process import generate_negative_sample
-import utils.data_process as dps
-from tqdm import tqdm
-import utils.metrics as mtc
-from models.mate_model import MateModel
 
-
-class RGCN(MateModel):
+class GGEcdDcd(MateModel):
     def __init__(self,
-                 rgcn_base: RGCNBase,
+                 base_model: GGEcdDcdBase,
                  data: DataLoader,
                  opt: torch.optim.Optimizer
                  ):
-        super(RGCN, self).__init__()
-        self.model = rgcn_base
+        super(GGEcdDcd, self).__init__()
+        self.model = base_model
         self.data = data
         self.opt = opt
-        self.name = 'rgcn'
-        # decoder
-        num_rela_expand = self.model.num_relation * 2 if self.model.inverse else self.model.num_relation
-        self.dist_mult = DistMultDecoder(num_rela_expand, self.model.dims[-1])
-        self.opt.add_param_group({'params': self.dist_mult.parameters()})
-
-        self.cross_entropy = nn.CrossEntropyLoss(reduction='sum')
+        self.name = 'ggecddcd'
         self.ans = None
+
+        self.graph = self.data.train
+
+        self.cross_entropy = torch.nn.CrossEntropyLoss(reduction='sum')
 
     def train_epoch(self,
                     batch_size=128):
-        self.train()
-        self.opt.zero_grad()
-        if self.model.inverse:
-            edge = dps.add_inverse(self.data.train, self.model.num_relation)
-        else:
-            edge = self.data.train
+        edge = self.graph
+
         total_loss = 0
         # generate negative edge
-        nag_edge = generate_negative_sample(edge, self.model.num_entity)
+        nag_edge = dps.generate_negative_sample(edge, self.data.num_entity)
         data = torch.cat([edge, nag_edge], dim=0)
         target = torch.cat([torch.ones(edge.shape[0], dtype=torch.long, device=data.device),
                             torch.zeros(nag_edge.shape[0], dtype=torch.long, device=data.device)]).unsqueeze(1)
@@ -59,11 +51,31 @@ class RGCN(MateModel):
         self.opt.step()
         return total_loss / total_batch
 
+    def loss(self,
+             h_input,
+             edge=None,
+             link_tag=None,
+             use_l2_regularization=False) -> torch.Tensor:
+        if self.model.decoder == 'distmult':
+            score = nn.functional.sigmoid(self.model.Decoder.forward(h_input[edge[:, 0]],
+                                                                     h_input[edge[:, 2]],
+                                                                     edge[:, 1])).unsqueeze(1)
+        elif self.model.decoder == 'transe':
+            dist = (h_input[edge[:, 0]] + self.model.rela_embed.weight[edge[:, 1]]
+                    - h_input[edge[:, 2]]).norm(p=2, dim=-1)
+            score = 1 - nn.functional.sigmoid(dist).unsqueeze(1)
+
+        score = torch.cat([1 - score, score], dim=1)
+        loss = self.cross_entropy(score, link_tag)
+        if use_l2_regularization:
+            loss = loss + self.weight_decay()
+        return loss
+
     def test(self,
              batch_size=128,
              dataset='valid',
              metric_list=None,
-             filter_out=False) -> dict:
+             filter_out=False):
         if filter_out and self.ans is None:
             self.ans = dps.get_answer(torch.cat([self.data.train, self.data.valid, self.data.test], dim=0),
                                       self.data.num_entity, self.data.num_relation)
@@ -77,8 +89,6 @@ class RGCN(MateModel):
             data = self.data.test
         else:
             raise Exception('dataset ' + dataset + ' is not defined!')
-        if self.model.inverse:
-            data = dps.add_inverse(data, self.model.num_relation)
         data_batched = dps.batch_data(data, batch_size)
         total_batch = int(len(data) / batch_size) + (len(data) % batch_size != 0)
 
@@ -87,10 +97,7 @@ class RGCN(MateModel):
         self.eval()
         with torch.no_grad():
 
-            if self.model.inverse:
-                h = self.model.forward(dps.add_inverse(self.data.train, self.model.num_relation))
-            else:
-                h = self.model.forward(self.data.train)
+            h = self.model.forward(self.graph)
 
             for batch_index in tqdm(range(total_batch)):
                 batch = next(data_batched)
@@ -99,7 +106,12 @@ class RGCN(MateModel):
                 obj = obj.expand(sr.shape[0], -1, 1)
                 sr = sr.unsqueeze(1).expand(-1, h.shape[0], 2)
                 edges = torch.cat((sr, obj), dim=2)
-                score = self.dist_mult(h[edges[:, :, 0]], h[edges[:, :, 2]], edges[:, :, 1])
+                if self.model.decoder == 'distmult':
+                    score = self.model.Decoder(h[edges[:, :, 0]], h[edges[:, :, 2]], edges[:, :, 1])
+                elif self.model.decoder == 'transe':
+                    dist = (h[edges[:, :, 0]] + self.model.rela_embed.weight[edges[:, :, 1]]
+                            - h[edges[:, :, 2]]).norm(p=2, dim=-1)
+                    score = 1 - nn.functional.sigmoid(dist)
                 rank = mtc.calculate_rank(score, batch[:, 2])
                 rank_list.append(rank)
                 if filter_out:
@@ -114,34 +126,5 @@ class RGCN(MateModel):
             metrics.update(metrics_filter)
         return metrics
 
-    def weight_decay(self, penalty=0.01):
-        return self.dist_mult.diag.pow(2).sum() * penalty
-
-    def loss(self,
-             h_input,
-             edge=None,
-             link_tag=None,
-             use_l2_regularization=False) -> torch.Tensor:
-        score = nn.functional.sigmoid(self.dist_mult.forward(h_input[edge[:, 0]],
-                                                             h_input[edge[:, 2]],
-                                                             edge[:, 1])).unsqueeze(1)
-        score = torch.cat([1 - score, score], dim=1)
-        loss = self.cross_entropy(score, link_tag)
-        if use_l2_regularization:
-            loss = loss + self.weight_decay()
-        return loss
-
     def get_config(self):
-        config = {}
-        config['model'] = self.name
-        config['dataset'] = self.data.dataset
-        config['dim_list'] = self.model.dims
-        config['num_relation'] = self.data.num_relation
-        config['num_entity'] = self.data.num_entity
-        config['use_basis'] = self.model.use_basis
-        config['num_basis'] = self.model.num_basis
-        config['use_block'] = self.model.use_block
-        config['num_block'] = self.model.num_block
-        config['dropout_s'] = self.model.dropout_s
-        config['dropout_o'] = self.model.dropout_o
-        return config
+        return
