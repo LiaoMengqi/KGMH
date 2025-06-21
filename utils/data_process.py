@@ -115,18 +115,28 @@ def filter_score(score: torch.Tensor,
 
 def load_data(file: str,
               load_time=False,
-              encoding='utf-8'):
+              encoding='utf-8',entity_type = 'object'):
     data = []
     with open(file, encoding=encoding) as f:
         content = f.read()
         content = content.strip()
         content = content.split("\n")
-        for line in content:
-            fact = line.split()
-            if load_time:
-                data.append([int(fact[0]), int(fact[1]), int(fact[2]), int(fact[3])])
-            else:
-                data.append([int(fact[0]), int(fact[1]), int(fact[2])])
+        if entity_type == 'object':
+            for line in content:
+                fact = line.split()
+                if load_time:
+                    data.append([int(fact[0]), int(fact[1]), int(fact[2]), int(fact[3])])
+                else:
+                    data.append([int(fact[0]), int(fact[1]), int(fact[2])])
+        elif entity_type == 'subject':
+            for line in content:
+                fact = line.split()
+                if load_time:
+                    data.append([int(fact[2]), int(fact[1]), int(fact[0]), int(fact[3])])
+                else:
+                    data.append([int(fact[2]), int(fact[1]), int(fact[0])])
+        else:
+            raise ValueError('entity_type must be object or subject')
     data = torch.LongTensor(data)
     return data
 
