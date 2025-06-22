@@ -128,7 +128,7 @@ def main(args):
         model = load_checkpoint(args.checkpoint, model_handle, args, device)
     else:
         # load data
-        data = DataLoader(args.dataset, root_path='./data/', type=model_handle.get_type(args.model))
+        data = DataLoader(args.dataset, root_path='./data/', type=model_handle.get_type(args.model), entity=args.entity)
         data.load()
         data.to(device)
         # base model
@@ -168,6 +168,8 @@ if __name__ == '__main__':
                         help="configure parameter")
     parser.add_argument('--checkpoint', type=str, default=None,
                         help='path and name of model saved')
+    parser.add_argument("--entity",type=str, default="object",
+                        help="predict subject or object")
     # dataset
     parser.add_argument("--dataset", type=str, default=None,
                         help="choose dataset")

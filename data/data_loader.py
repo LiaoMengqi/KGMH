@@ -8,7 +8,7 @@ class DataLoader(object):
     def __init__(self,
                  dataset,
                  root_path,
-                 type):
+                 type,entity):
         """
         param dataset: the name of dataset
         param path: the path of dataset
@@ -36,6 +36,7 @@ class DataLoader(object):
         self.num_relation = 0
         self.num_entity = 0
         self.device = 'cpu'
+        self.entity = entity
 
     def load(self,
              encoding='utf-8'):
@@ -43,13 +44,13 @@ class DataLoader(object):
         Initialize training set, validation set and test set.
         """
         file = self.path + '/' + self.dataset + '/train.txt'
-        self.train = load_data(file, load_time=self.load_time, encoding=encoding)
+        self.train = load_data(file, load_time=self.load_time, encoding=encoding, entity_type=self.entity)
 
         file = self.path + '/' + self.dataset + '/valid.txt'
-        self.valid = load_data(file, load_time=self.load_time, encoding=encoding)
+        self.valid = load_data(file, load_time=self.load_time, encoding=encoding, entity_type=self.entity)
 
         file = self.path + '/' + self.dataset + '/test.txt'
-        self.test = load_data(file, load_time=self.load_time, encoding=encoding)
+        self.test = load_data(file, load_time=self.load_time, encoding=encoding, entity_type=self.entity)
 
         file = self.path + '/' + self.dataset + '/relation2id.txt'
         self.relation2id = load_dict(file)
